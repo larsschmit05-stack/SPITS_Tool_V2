@@ -144,7 +144,6 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
   const {
     state,
     addResource,
-    createProcessElement,
     deleteResource,
     updateResource,
     markAsTemplate,

@@ -11,12 +11,9 @@ import type {
   FlowNode,
   FlowEdge,
   ProductMixEntry,
-  CreateActionIntent,
-  ProcessElementCreateDraft,
 } from './types';
 import type { RunBundle } from '../engine/types';
 import { DEFAULT_PROJECT_STATE } from './seed';
-import { normalizeCreateDraftToResource, validateProcessElementCreateDraft } from '../engine/validators';
 
 const STORAGE_KEY = 'capaciteitstool_state_v2';
 
@@ -120,9 +117,6 @@ export type AppAction =
   | { type: 'DELETE_EDGE'; payload: string }
   // Run result (runtime-only)
   | { type: 'SET_RUN_RESULT'; payload: RunBundle | null }
-  // Utility
-  | { type: 'MARK_DIRTY' }
-  | { type: 'CLEAR_DIRTY' }
   | { type: 'LOAD_STATE'; payload: ProjectState };
 
 // ---------------------------------------------------------------------------
@@ -670,13 +664,6 @@ export function appReducer(state: ProjectState, action: AppAction): ProjectState
     case 'SET_RUN_RESULT':
       return { ...state, latestRunResult: action.payload };
 
-    // --- Utility ---
-    case 'MARK_DIRTY':
-      return { ...state, isDirty: true };
-
-    case 'CLEAR_DIRTY':
-      return { ...state, isDirty: false };
-
     case 'LOAD_STATE':
       return action.payload;
 
@@ -700,7 +687,6 @@ interface AppContextType {
   setSourceProductMix: (nodeId: string, entries: ProductMixEntry[]) => void;
   // Resources
   addResource: (resource: Omit<Resource, 'id'>) => string;
-  createProcessElement: (draft: ProcessElementCreateDraft, intent: CreateActionIntent) => { createdResourceId: string; intent: CreateActionIntent };
   updateResource: (resource: Resource) => void;
   deleteResource: (id: string) => void;
   // Resource library (legacy)
@@ -746,9 +732,6 @@ interface AppContextType {
   deleteEdge: (id: string) => void;
   // Run result
   setRunResult: (result: RunBundle | null) => void;
-  // Utility
-  markDirty: () => void;
-  clearDirty: () => void;
 }
 
 const AppStateContext = createContext<AppContextType | undefined>(undefined);
@@ -883,18 +866,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
     const id = uid();
     dispatch({ type: 'ADD_RESOURCE', payload: { id, ...resource } });
     return id;
-  };
-  const createProcessElement = (draft: ProcessElementCreateDraft, intent: CreateActionIntent) => {
-    const errors = validateProcessElementCreateDraft(draft, state.departments);
-    if (Object.keys(errors).length > 0) {
-      throw new Error('Cannot create process element with invalid draft');
-    }
-    const payload = normalizeCreateDraftToResource(draft);
-    const id = addResource(payload);
-    if (draft.resourceClass !== 'delay' && draft.departmentId) {
-      dispatch({ type: 'SET_LAST_USED_DEPARTMENT', payload: draft.departmentId });
-    }
-    return { createdResourceId: id, intent };
   };
   const updateResource = (resource: Resource) => {
     dispatch({ type: 'UPDATE_RESOURCE', payload: resource });
@@ -1088,10 +1059,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
     dispatch({ type: 'SET_RUN_RESULT', payload: result });
   };
 
-  // --- Utility ---
-  const markDirty = () => dispatch({ type: 'MARK_DIRTY' });
-  const clearDirty = () => dispatch({ type: 'CLEAR_DIRTY' });
-
   const value: AppContextType = {
     state,
     addMaterial,
@@ -1101,7 +1068,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
     clearNodeMaterialConversion,
     setSourceProductMix,
     addResource,
-    createProcessElement,
     updateResource,
     deleteResource,
     markAsTemplate,
@@ -1138,8 +1104,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
     addEdge,
     deleteEdge,
     setRunResult,
-    markDirty,
-    clearDirty,
   };
 
   return (
