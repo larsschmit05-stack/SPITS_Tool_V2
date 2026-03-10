@@ -5,6 +5,7 @@ import { Dashboard } from './Dashboard';
 import { ProcessBuilder } from './ProcessBuilder';
 import { Resources } from './Resources';
 import { Departments } from './Departments';
+import { Materials } from './Materials';
 import { Scenarios } from './Scenarios';
 import { AppStateProvider } from './src/state/store';
 
@@ -21,6 +22,8 @@ function AppContent() {
         return <Resources onNavigate={setActiveTab} />;
       case 'departments':
         return <Departments />;
+      case 'materials':
+        return <Materials />;
       case 'scenarios':
         return <Scenarios onNavigate={setActiveTab} />;
       default:

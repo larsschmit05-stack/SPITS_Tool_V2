@@ -137,6 +137,10 @@ export type EngineFlowStep =
       label: string;
       resourceId: string;
       enabled: boolean;
+      inputMaterialId?: string;
+      outputMaterialId?: string;
+      /** Output units produced per input unit. Defaults to 1. */
+      conversionRatio?: number;
     }
   | {
       type: 'timeStep';
@@ -144,6 +148,10 @@ export type EngineFlowStep =
       label: string;
       durationMinutesPerUnit: number;
       enabled: boolean;
+      inputMaterialId?: string;
+      outputMaterialId?: string;
+      /** Output units produced per input unit. Defaults to 1. */
+      conversionRatio?: number;
     };
 
 // Minimal edge type used internally by flow linearisation
@@ -297,6 +305,12 @@ export interface StepResult {
 
   // --- TimeStep-only field (undefined for ResourceStep) ---
   durationMinutesPerUnit?: number;
+
+  // --- Material conversion fields ---
+  inputMaterialId?: string;
+  outputMaterialId?: string;
+  /** Effective conversion ratio applied at this step. 1 when no conversion. */
+  conversionRatio?: number;
 
   // --- Calculated performance fields ---
   scheduledHours: number;

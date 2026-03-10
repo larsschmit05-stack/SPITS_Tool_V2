@@ -1,12 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppState } from './src/state/store';
-import type { FlowNode, FlowEdge } from './src/state/types';
+import type { FlowNode, FlowEdge, ProductMixEntry } from './src/state/types';
 import type { StepResult } from './src/engine/types';
 import { run } from './src/engine/engine';
 import {
   Plus, MousePointer2, Move, Trash2, Settings2, PlayCircle, StopCircle,
-  Clock, Copy, X, ExternalLink, AlertTriangle, CheckCircle2, Zap
+  Clock, Copy, X, ExternalLink, AlertTriangle, CheckCircle2, Zap, Package, ChevronDown, ChevronRight
 } from 'lucide-react';
 
 const NODE_WIDTH = 200;
@@ -316,7 +316,8 @@ interface NodeDetailPanelProps {
 }
 
 const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isBottleneck = false, onClose, onNavigate }) => {
-  const { state, updateNode, setNodeResource, setNodeDuration, deleteNode } = useAppState();
+  const { state, updateNode, setNodeResource, setNodeDuration, deleteNode, setNodeMaterialConversion, clearNodeMaterialConversion, setSourceProductMix } = useAppState();
+  const [showConversion, setShowConversion] = useState(false);
 
   const [nameVal, setNameVal] = useState(node.name);
   const [durVal, setDurVal] = useState<string>(
@@ -379,18 +380,100 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* Terminal nodes: read-only */}
-        {isTerminal && (
+        {/* Terminal nodes */}
+        {isTerminal && node.nodeType === 'end' && (
           <div className="p-5 text-center">
             <div className="mb-3 p-3 bg-slate-100 rounded-xl inline-block">
-              {node.nodeType === 'start'
-                ? <PlayCircle className="w-6 h-6 text-emerald-500" />
-                : <StopCircle className="w-6 h-6 text-slate-500" />
-              }
+              <StopCircle className="w-6 h-6 text-slate-500" />
             </div>
-            <p className="text-sm text-slate-500">
-              {node.nodeType === 'start' ? 'Materiaal ingang — geen configuratie nodig.' : 'Proces eindpunt — geen configuratie nodig.'}
-            </p>
+            <p className="text-sm text-slate-500">Proces eindpunt — geen configuratie nodig.</p>
+          </div>
+        )}
+
+        {/* Start node: product mix editor */}
+        {isTerminal && node.nodeType === 'start' && (
+          <div className="p-4 space-y-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Package className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-xs font-bold text-slate-700">Productmix</span>
+              </div>
+              {(state.materials ?? []).length === 0 && (
+                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>Maak eerst materialen aan op de Materialen-pagina</span>
+                </div>
+              )}
+              {(node.productMix ?? []).map((entry, idx) => (
+                <div key={entry.id} className="flex items-center gap-1.5 mb-1.5">
+                  <input
+                    type="text"
+                    value={entry.label}
+                    onChange={e => {
+                      const updated = (node.productMix ?? []).map((en, i) =>
+                        i === idx ? { ...en, label: e.target.value } : en
+                      );
+                      setSourceProductMix(node.id, updated);
+                    }}
+                    className="w-20 text-xs border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    placeholder="Label"
+                  />
+                  <select
+                    value={entry.materialId}
+                    onChange={e => {
+                      const updated = (node.productMix ?? []).map((en, i) =>
+                        i === idx ? { ...en, materialId: e.target.value } : en
+                      );
+                      setSourceProductMix(node.id, updated);
+                    }}
+                    className="flex-1 text-xs border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
+                  >
+                    <option value="">— Materiaal —</option>
+                    {(state.materials ?? []).map(m => (
+                      <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={entry.quantity}
+                    onChange={e => {
+                      const updated = (node.productMix ?? []).map((en, i) =>
+                        i === idx ? { ...en, quantity: Number(e.target.value) } : en
+                      );
+                      setSourceProductMix(node.id, updated);
+                    }}
+                    className="w-16 text-xs border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    placeholder="Qty"
+                  />
+                  <button
+                    onClick={() => {
+                      const updated = (node.productMix ?? []).filter((_, i) => i !== idx);
+                      setSourceProductMix(node.id, updated);
+                    }}
+                    className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  const newEntry: ProductMixEntry = {
+                    id: Math.random().toString(36).slice(2, 9),
+                    label: `Type ${(node.productMix ?? []).length + 1}`,
+                    materialId: '',
+                    quantity: 0,
+                  };
+                  setSourceProductMix(node.id, [...(node.productMix ?? []), newEntry]);
+                }}
+                className="mt-1 flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-medium"
+              >
+                <Plus className="w-3 h-3" />
+                Type toevoegen
+              </button>
+            </div>
           </div>
         )}
 
@@ -478,7 +561,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
             {/* TimeStep: duration */}
             {isTimeStep && (
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Duur (minuten per eenheid)</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Transporttijd</label>
                 {!node.durationMinutesPerUnit && (
                   <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
                     <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
@@ -514,6 +597,116 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
               >
                 <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
               </button>
+            </div>
+
+            {/* Material conversion section */}
+            <div className="border-t border-slate-100 pt-3">
+              <button
+                onClick={() => setShowConversion(prev => !prev)}
+                className="flex items-center gap-2 w-full text-left"
+              >
+                {showConversion
+                  ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                  : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                }
+                <Package className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-xs font-bold text-slate-600">Materiaal conversie</span>
+                {node.conversionRatio && node.conversionRatio !== 1 && (
+                  <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-semibold">
+                    ×{node.conversionRatio}
+                  </span>
+                )}
+              </button>
+
+              {showConversion && (
+                <div className="mt-3 space-y-3">
+                  {(state.materials ?? []).length === 0 && (
+                    <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>Maak eerst materialen aan op de Materialen-pagina</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Input materiaal</label>
+                    <select
+                      value={node.inputMaterialId ?? ''}
+                      onChange={e => {
+                        if (e.target.value) {
+                          setNodeMaterialConversion(
+                            node.id,
+                            e.target.value,
+                            node.outputMaterialId ?? e.target.value,
+                            node.conversionRatio ?? 1
+                          );
+                        }
+                      }}
+                      className="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
+                    >
+                      <option value="">— Geen —</option>
+                      {(state.materials ?? []).map(m => (
+                        <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Output materiaal</label>
+                    <select
+                      value={node.outputMaterialId ?? ''}
+                      onChange={e => {
+                        if (e.target.value) {
+                          setNodeMaterialConversion(
+                            node.id,
+                            node.inputMaterialId ?? e.target.value,
+                            e.target.value,
+                            node.conversionRatio ?? 1
+                          );
+                        }
+                      }}
+                      className="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
+                    >
+                      <option value="">— Geen —</option>
+                      {(state.materials ?? []).map(m => (
+                        <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Conversieverhouding (output per input)</label>
+                    <input
+                      type="number"
+                      min="0.0001"
+                      step="0.01"
+                      value={node.conversionRatio ?? 1}
+                      onChange={e => {
+                        const v = parseFloat(e.target.value);
+                        if (!isNaN(v) && v > 0) {
+                          setNodeMaterialConversion(
+                            node.id,
+                            node.inputMaterialId ?? '',
+                            node.outputMaterialId ?? '',
+                            v
+                          );
+                        }
+                      }}
+                      className="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                      placeholder="1"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Bijv. 57.14 sachets per pot</p>
+                  </div>
+
+                  {(node.inputMaterialId || node.outputMaterialId || (node.conversionRatio && node.conversionRatio !== 1)) && (
+                    <button
+                      onClick={() => clearNodeMaterialConversion(node.id)}
+                      className="text-xs text-slate-400 hover:text-red-500 font-medium transition-colors"
+                    >
+                      Conversie wissen
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

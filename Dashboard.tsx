@@ -121,6 +121,7 @@ export const Dashboard: React.FC = () => {
           scenarioValue: stepDelta?.scenarioUtilization != null ? Math.round(stepDelta.scenarioUtilization * 100) : null,
           delta: stepDelta?.deltaUtilization != null ? Math.round(stepDelta.deltaUtilization * 100) : null,
           isProcessStep: true,
+          conversionRatio: s.conversionRatio,
         };
       });
   }, [latestRun, comparison, state.nodes]);
@@ -438,7 +439,14 @@ export const Dashboard: React.FC = () => {
                       return (
                         <div key={item.name} className="space-y-1.5">
                             <div className="flex justify-between text-xs font-semibold">
-                                <span className="text-slate-700">{item.name}</span>
+                                <span className="flex items-center gap-1.5 text-slate-700">
+                                  {item.name}
+                                  {item.conversionRatio != null && (
+                                    <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1 py-0.5 rounded font-bold">
+                                      ×{item.conversionRatio}
+                                    </span>
+                                  )}
+                                </span>
                                 <div className="flex items-center gap-2 tabular-nums">
                                   {hasScenario ? (
                                     <>

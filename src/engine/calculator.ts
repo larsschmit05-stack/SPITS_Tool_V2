@@ -145,6 +145,8 @@ export function computeStepResults(
     baseRate: number;
     effectiveRateUnitsPerHour: number;
     yieldFactor: number; // 0..1, for this step only
+    /** Output units produced per input unit at this step. Defaults to 1. */
+    conversionRatio: number;
     dept: EngineDepartment | null;
   }
 
@@ -168,6 +170,7 @@ export function computeStepResults(
         baseRate: 0,
         effectiveRateUnitsPerHour: 0,
         yieldFactor: 1,
+        conversionRatio: 1,
         dept: null,
       };
     }
@@ -203,6 +206,7 @@ export function computeStepResults(
           baseRate: 0,
           effectiveRateUnitsPerHour: 0,
           yieldFactor: 1,
+          conversionRatio: 1,
           dept,
         };
       }
@@ -244,6 +248,9 @@ export function computeStepResults(
       // Only processing applies the user-defined yieldPct.
       const yieldFactor = resourceClass === 'processing' ? resource.yieldPct / 100 : 1.0;
 
+      const rawRatio = step.type === 'resourceStep' ? step.conversionRatio : undefined;
+      const stepConversionRatio = (rawRatio !== undefined && rawRatio > 0) ? rawRatio : 1;
+
       return {
         stepId: step.id,
         stepIndex: idx,
@@ -257,6 +264,7 @@ export function computeStepResults(
         baseRate,
         effectiveRateUnitsPerHour,
         yieldFactor,
+        conversionRatio: stepConversionRatio,
         dept,
       };
     }
@@ -266,6 +274,9 @@ export function computeStepResults(
     // timeStep: no startup, no availability factor, yield = 1
     const effectiveRateUnitsPerHour =
       step.durationMinutesPerUnit > 0 ? 60 / step.durationMinutesPerUnit : 0;
+
+    const rawTimeRatio = step.type === 'timeStep' ? step.conversionRatio : undefined;
+    const timeConversionRatio = (rawTimeRatio !== undefined && rawTimeRatio > 0) ? rawTimeRatio : 1;
 
     return {
       stepId: step.id,
@@ -280,6 +291,7 @@ export function computeStepResults(
       baseRate: effectiveRateUnitsPerHour,
       effectiveRateUnitsPerHour,
       yieldFactor: 1,
+      conversionRatio: timeConversionRatio,
       dept,
     };
   });
@@ -308,22 +320,20 @@ export function computeStepResults(
   // We need cumYieldToEnd[i] = product from step i to end of enabled chain.
   // Re-do: iterate from end, accumulate only enabled steps, set their cumYield.
   {
+    // acc represents "how many final-material good units come from 1 output unit of step i+1"
+    // cumYieldToEnd[i] = yieldFactor[i] * acc_before_this_step
+    // acc update: acc = yieldFactor[i] * conversionRatio[i] * acc_before
+    // conversionRatio=1 everywhere → identical results to the old pure-yield pass.
     let acc = 1;
     for (let i = intermediates.length - 1; i >= 0; i--) {
       const im = intermediates[i];
       if (!im.enabled) continue;
-      acc *= im.yieldFactor;
-      cumYieldToEnd[i] = acc;
+      cumYieldToEnd[i] = im.yieldFactor * acc;
+      acc = im.yieldFactor * im.conversionRatio * acc;
     }
-    // Normalise so that last enabled step has cumYield = its own yieldFactor (towards end)
-    // Actually the contract says cumYieldToEnd_i = Π(yield_k) for k=i..lastEnabled
-    // which means the last enabled step has cumYield = its own yieldFactor (not 1).
-    // But that's already what we computed above (we multiply own yield first).
-    // Re-check: for last enabled step, acc = 1 * yieldFactor_last = yieldFactor_last. Correct.
-    // For second-to-last: acc = yieldFactor_last * yieldFactor_secondLast. Correct.
 
     // Assign disabled step cumYields: they get the cumYield of the next enabled step downstream
-    // (or 1 if none). This value is not actually used in disabled step output.
+    // (or 1 if none). This value is not used in disabled step output.
     let nextEnabledCumYield = 1;
     for (let i = intermediates.length - 1; i >= 0; i--) {
       if (intermediates[i].enabled) {
@@ -408,6 +418,15 @@ export function computeStepResults(
       base.durationMinutesPerUnit = im.step.durationMinutesPerUnit;
     }
 
+    // Material conversion fields (for both resourceStep and timeStep)
+    if (im.step.type === 'resourceStep' || im.step.type === 'timeStep') {
+      base.inputMaterialId = im.step.inputMaterialId;
+      base.outputMaterialId = im.step.outputMaterialId;
+      if (im.conversionRatio !== 1) {
+        base.conversionRatio = im.conversionRatio;
+      }
+    }
+
     return base;
   });
 }
@@ -427,6 +446,7 @@ function buildExplain(
     effectiveHours: number;
     effectiveRateUnitsPerHour: number;
     baseRate: number;
+    conversionRatio: number;
   },
   cumYieldToEnd: number,
   stepMaxGoodUnitsPerHour: number,
@@ -509,8 +529,11 @@ function buildExplain(
     lines.push(`Effective hours = scheduled hours (no availability factor for TimeStep)`);
   }
 
+  if (im.conversionRatio !== 1) {
+    lines.push(`Conversieratio: ${round4(im.conversionRatio)} output-eenheden per input-eenheid`);
+  }
   lines.push(
-    `Forward yield to end = ${round4(cumYieldToEnd)} → stepMaxGoodUnitsPerHour = ${round4(stepMaxGoodUnitsPerHour)}`
+    `Cumulatieve factor naar einde = ${round4(cumYieldToEnd)} → stepMaxGoodUnitsPerHour = ${round4(stepMaxGoodUnitsPerHour)}`
   );
 
   if (utilizationAtTarget !== null) {

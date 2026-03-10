@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import type {
   ProjectState,
+  Material,
   Resource,
   ResourceTemplate,
   Department,
@@ -9,6 +10,7 @@ import type {
   ScenarioPatch,
   FlowNode,
   FlowEdge,
+  ProductMixEntry,
   CreateActionIntent,
   ProcessElementCreateDraft,
 } from './types';
@@ -20,6 +22,7 @@ const STORAGE_KEY = 'capaciteitstool_state_v2';
 
 /** State keys that are persisted to localStorage. Runtime-only keys are excluded. */
 const PERSISTED_STATE_KEYS: (keyof ProjectState)[] = [
+  'materials',
   'resources',
   'templates',
   'departments',
@@ -61,6 +64,15 @@ function sumHoursByWeekday(hoursByWeekday: Department['hoursByWeekday']): number
 // ---------------------------------------------------------------------------
 
 export type AppAction =
+  // Materials
+  | { type: 'ADD_MATERIAL'; payload: Material }
+  | { type: 'UPDATE_MATERIAL'; payload: Material }
+  | { type: 'DELETE_MATERIAL'; payload: string }
+  // Node material conversion
+  | { type: 'SET_NODE_MATERIAL_CONVERSION'; payload: { nodeId: string; inputMaterialId: string; outputMaterialId: string; conversionRatio: number } }
+  | { type: 'CLEAR_NODE_MATERIAL_CONVERSION'; payload: { nodeId: string } }
+  // Source product mix
+  | { type: 'SET_SOURCE_PRODUCT_MIX'; payload: { nodeId: string; entries: ProductMixEntry[] } }
   // Resources
   | { type: 'ADD_RESOURCE'; payload: Resource }
   | { type: 'SET_LAST_USED_DEPARTMENT'; payload: string | null }
@@ -157,6 +169,65 @@ export function enforceScenarioConstraints(scenarios: Scenario[]): Array<{ type:
 
 export function appReducer(state: ProjectState, action: AppAction): ProjectState {
   switch (action.type) {
+    // --- Materials ---
+    case 'ADD_MATERIAL':
+      return { ...state, materials: [...(state.materials ?? []), action.payload], isDirty: true };
+
+    case 'UPDATE_MATERIAL':
+      return {
+        ...state,
+        materials: (state.materials ?? []).map(m =>
+          m.id === action.payload.id ? action.payload : m
+        ),
+        isDirty: true,
+      };
+
+    case 'DELETE_MATERIAL':
+      return {
+        ...state,
+        materials: (state.materials ?? []).filter(m => m.id !== action.payload),
+        isDirty: true,
+      };
+
+    case 'SET_NODE_MATERIAL_CONVERSION': {
+      const { nodeId, inputMaterialId, outputMaterialId, conversionRatio } = action.payload;
+      return {
+        ...state,
+        nodes: state.nodes.map(n =>
+          n.id === nodeId
+            ? { ...n, inputMaterialId, outputMaterialId, conversionRatio, updatedAt: Date.now() }
+            : n
+        ),
+        isDirty: true,
+      };
+    }
+
+    case 'CLEAR_NODE_MATERIAL_CONVERSION': {
+      const { nodeId } = action.payload;
+      return {
+        ...state,
+        nodes: state.nodes.map(n => {
+          if (n.id !== nodeId) return n;
+          const { inputMaterialId: _i, outputMaterialId: _o, conversionRatio: _c, ...rest } = n;
+          return { ...rest, updatedAt: Date.now() };
+        }),
+        isDirty: true,
+      };
+    }
+
+    case 'SET_SOURCE_PRODUCT_MIX': {
+      const { nodeId, entries } = action.payload;
+      return {
+        ...state,
+        nodes: state.nodes.map(n =>
+          n.id === nodeId && n.nodeType === 'start'
+            ? { ...n, productMix: entries, updatedAt: Date.now() }
+            : n
+        ),
+        isDirty: true,
+      };
+    }
+
     // --- Resources ---
     case 'ADD_RESOURCE':
       return { ...state, resources: [...state.resources, action.payload], isDirty: true };
@@ -620,6 +691,13 @@ export function appReducer(state: ProjectState, action: AppAction): ProjectState
 
 interface AppContextType {
   state: ProjectState;
+  // Materials
+  addMaterial: (material: Omit<Material, 'id' | 'createdAt' | 'updatedAt'>) => string;
+  updateMaterial: (material: Material) => void;
+  deleteMaterial: (id: string) => void;
+  setNodeMaterialConversion: (nodeId: string, inputMaterialId: string, outputMaterialId: string, conversionRatio: number) => void;
+  clearNodeMaterialConversion: (nodeId: string) => void;
+  setSourceProductMix: (nodeId: string, entries: ProductMixEntry[]) => void;
   // Resources
   addResource: (resource: Omit<Resource, 'id'>) => string;
   createProcessElement: (draft: ProcessElementCreateDraft, intent: CreateActionIntent) => { createdResourceId: string; intent: CreateActionIntent };
@@ -760,6 +838,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
           ...parsed,
           resources: migratedResources,
           templates: mergedTemplates,
+          materials: parsed.materials ?? [],
           latestRunResult: null, // never restore from localStorage
           isDirty: false,
         };
@@ -775,6 +854,29 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     persistState(state);
   }, [state]);
+
+  // --- Materials ---
+  const addMaterial = (material: Omit<Material, 'id' | 'createdAt' | 'updatedAt'>): string => {
+    const id = uid();
+    const now = Date.now();
+    dispatch({ type: 'ADD_MATERIAL', payload: { id, ...material, createdAt: now, updatedAt: now } });
+    return id;
+  };
+  const updateMaterial = (material: Material) => {
+    dispatch({ type: 'UPDATE_MATERIAL', payload: { ...material, updatedAt: Date.now() } });
+  };
+  const deleteMaterial = (id: string) => {
+    dispatch({ type: 'DELETE_MATERIAL', payload: id });
+  };
+  const setNodeMaterialConversion = (nodeId: string, inputMaterialId: string, outputMaterialId: string, conversionRatio: number) => {
+    dispatch({ type: 'SET_NODE_MATERIAL_CONVERSION', payload: { nodeId, inputMaterialId, outputMaterialId, conversionRatio } });
+  };
+  const clearNodeMaterialConversion = (nodeId: string) => {
+    dispatch({ type: 'CLEAR_NODE_MATERIAL_CONVERSION', payload: { nodeId } });
+  };
+  const setSourceProductMix = (nodeId: string, entries: ProductMixEntry[]) => {
+    dispatch({ type: 'SET_SOURCE_PRODUCT_MIX', payload: { nodeId, entries } });
+  };
 
   // --- Resources ---
   const addResource = (resource: Omit<Resource, 'id'>): string => {
@@ -992,6 +1094,12 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const value: AppContextType = {
     state,
+    addMaterial,
+    updateMaterial,
+    deleteMaterial,
+    setNodeMaterialConversion,
+    clearNodeMaterialConversion,
+    setSourceProductMix,
     addResource,
     createProcessElement,
     updateResource,

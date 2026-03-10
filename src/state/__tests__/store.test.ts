@@ -26,6 +26,8 @@ const baseScenario: Scenario = {
 };
 
 const baseState: ProjectState = {
+  materials: [],
+  templates: [],
   resources: [
     {
       id: 'res-01',

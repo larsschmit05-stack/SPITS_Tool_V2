@@ -135,6 +135,9 @@ function buildEngineInput(
           label: node.name,
           resourceId: node.resourceId,
           enabled: node.enabled !== false,
+          inputMaterialId: node.inputMaterialId,
+          outputMaterialId: node.outputMaterialId,
+          conversionRatio: node.conversionRatio,
         };
       }
       if (node.nodeType === 'timeStep' && node.durationMinutesPerUnit !== undefined) {
@@ -144,6 +147,9 @@ function buildEngineInput(
           label: node.name,
           durationMinutesPerUnit: node.durationMinutesPerUnit,
           enabled: node.enabled !== false,
+          inputMaterialId: node.inputMaterialId,
+          outputMaterialId: node.outputMaterialId,
+          conversionRatio: node.conversionRatio,
         };
       }
       return null;

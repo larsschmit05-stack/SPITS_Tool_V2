@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { LayoutDashboard, Workflow, Settings, Database, BarChart3, Bell, User, Download, CheckCircle2, Factory, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Workflow, Settings, Database, BarChart3, Bell, User, Download, CheckCircle2, Factory, Loader2, Package } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useAppState } from './src/state/store';
@@ -124,6 +124,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
               id="departments"
               active={activeTab === 'departments'}
               onClick={() => onTabChange('departments')}
+            />
+            <NavItem
+              icon={Package}
+              label="Materialen"
+              id="materials"
+              active={activeTab === 'materials'}
+              onClick={() => onTabChange('materials')}
             />
           </div>
 

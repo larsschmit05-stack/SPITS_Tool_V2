@@ -146,6 +146,8 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
  *   Target 500 → feasible = true
  */
 export const DEFAULT_PROJECT_STATE: ProjectState = {
+  materials: [],
+
   resources: [
     {
       id: 'res-cnc-01',

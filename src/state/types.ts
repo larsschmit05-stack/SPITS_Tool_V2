@@ -9,6 +9,32 @@
 import type { RunBundle } from '../engine/types';
 
 // ---------------------------------------------------------------------------
+// Material
+// ---------------------------------------------------------------------------
+
+export interface Material {
+  id: string;
+  name: string;
+  /** Human-readable unit label, e.g. "box", "jar", "sachet" */
+  unit: string;
+  description?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * One entry in the product mix of a source (start) node.
+ * Describes what material type flows from this source and how many units.
+ */
+export interface ProductMixEntry {
+  id: string;
+  /** Display label, e.g. "Type A" */
+  label: string;
+  materialId: string;
+  quantity: number;
+}
+
+// ---------------------------------------------------------------------------
 // Resource
 // ---------------------------------------------------------------------------
 
@@ -356,6 +382,20 @@ export interface FlowNode {
   /** When false, step is excluded from throughput/bottleneck but stays in flow */
   enabled?: boolean;
   updatedAt?: number;
+
+  // --- Material system ---
+  /** start node only: which materials/types flow from this source */
+  productMix?: ProductMixEntry[];
+  /** resourceStep / timeStep: which material enters this step */
+  inputMaterialId?: string;
+  /** resourceStep / timeStep: which material exits this step */
+  outputMaterialId?: string;
+  /**
+   * Output units produced per input unit consumed at this step.
+   * E.g. 57.14 sachets per jar. Defaults to 1 (no conversion).
+   * Only meaningful when inputMaterialId ≠ outputMaterialId.
+   */
+  conversionRatio?: number;
 }
 
 export interface FlowEdge {
@@ -369,6 +409,7 @@ export interface FlowEdge {
 // ---------------------------------------------------------------------------
 
 export interface ProjectState {
+  materials: Material[];
   resources: Resource[];
   /**
    * Resource template library.

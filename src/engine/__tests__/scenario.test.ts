@@ -10,6 +10,8 @@ import type { RunParams } from '../engine';
 
 function makeBaseState(): ProjectState {
   return {
+    materials: [],
+    templates: [],
     resources: [
       {
         id: 'res-cnc',
