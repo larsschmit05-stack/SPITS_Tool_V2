@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MKB Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                50: '#E3F2FD', // Interaction Blue
+                100: '#BBDEFB',
+                500: '#0056D2', // Technical Blue (Primary)
+                600: '#0045A8', // Hover/Active
+                700: '#003380',
+                900: '#172B4D', // Primary Ink
+              },
+              slate: {
+                50: '#F4F6F8', // Canvas Background
+                100: '#F0F2F5',
+                200: '#DDE2E5', // Structural Border
+                300: '#C1C7D0',
+                400: '#A5ADBA', // Disabled/Placeholder
+                500: '#6B778C',
+                600: '#5E6C84', // Secondary Ink
+                700: '#42526E',
+                800: '#253858',
+                900: '#172B4D', // Primary Ink
+              },
+              status: {
+                red: '#D93025',
+                orange: '#B76E00',
+                green: '#1E8E3E',
+              }
+            },
+            boxShadow: {
+              'card': '0 1px 3px rgba(0,0,0,0.08)',
+              'floating': '0 4px 12px rgba(23, 43, 77, 0.12)',
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #F4F6F8;
+        color: #172B4D;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* Tabular numbers for data tables */
+      .tabular-nums {
+        font-feature-settings: "tnum";
+        font-variant-numeric: tabular-nums;
+      }
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #DDE2E5;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #C1C7D0;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.574.0",
+    "recharts": "https://esm.sh/recharts@^3.7.0",
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "jspdf": "https://esm.sh/jspdf@2.5.1"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

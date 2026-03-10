@@ -1,0 +1,88 @@
+
+import { NodeType, ProcessNode, Edge, ResourceData } from './types';
+
+export const MOCK_NODES: ProcessNode[] = [
+  { id: '1', type: NodeType.SOURCE, name: 'Inbound (Source)', position: { x: 50, y: 250 } },
+  { id: '2', type: NodeType.PROCESS, name: 'Assembly', position: { x: 250, y: 250 } },
+  { id: '3', type: NodeType.MIX, name: 'Packaging', position: { x: 500, y: 250 } },
+  { id: '4', type: NodeType.PROCESS, name: 'QA Testing', position: { x: 750, y: 250 } },
+  { id: '5', type: NodeType.END, name: 'Storage', position: { x: 950, y: 250 } },
+];
+
+export const MOCK_EDGES: Edge[] = [
+  { id: 'e1', source: '1', target: '2' },
+  { id: 'e2', source: '2', target: '3' },
+  { id: 'e3', source: '3', target: '4' },
+  { id: 'e4', source: '4', target: '5' },
+];
+
+export const MOCK_RESOURCES: ResourceData[] = [
+  {
+    id: '2',
+    name: 'Assembly',
+    type: NodeType.PROCESS,
+    cycleTimeSec: 300,
+    processMode: 'continuous',
+    unitsPerCycle: 1,
+    numMachines: 1,
+    operatorsRequired: 4,
+    availabilityPct: 100,
+    plannedDowntimeMin: 0,
+    unplannedDowntimeMin: 0,
+    setupTimeMin: 0,
+    setupTimePerBatchMin: 0,
+    changeoversPerShift: 0,
+    yieldPct: 95,
+  },
+  {
+    id: '3',
+    name: 'Packaging',
+    type: NodeType.MIX,
+    cycleTimeSec: 45,
+    processMode: 'continuous',
+    unitsPerCycle: 1,
+    numMachines: 2,
+    availabilityPct: 92,
+    plannedDowntimeMin: 0,
+    unplannedDowntimeMin: 0,
+    setupTimeMin: 0,
+    setupTimePerBatchMin: 0,
+    changeoversPerShift: 0,
+    operatorsRequired: 2,
+    yieldPct: 100,
+  },
+  {
+    id: '4',
+    name: 'QA Testing',
+    type: NodeType.PROCESS,
+    cycleTimeSec: 120,
+    processMode: 'continuous',
+    unitsPerCycle: 1,
+    numMachines: 1,
+    operatorsRequired: 3,
+    availabilityPct: 100,
+    plannedDowntimeMin: 0,
+    unplannedDowntimeMin: 0,
+    setupTimeMin: 0,
+    setupTimePerBatchMin: 0,
+    changeoversPerShift: 0,
+    yieldPct: 90,
+  },
+  {
+    id: '6',
+    name: 'CNC Milling',
+    type: NodeType.MACHINE,
+    cycleTimeSec: 180,
+    processMode: 'continuous',
+    unitsPerCycle: 1,
+    numMachines: 3,
+    operatorsRequired: 1,
+    availabilityPct: 85,
+    plannedDowntimeMin: 0,
+    unplannedDowntimeMin: 0,
+    setupTimeMin: 0,
+    setupTimePerBatchMin: 0,
+    changeoversPerShift: 0,
+    yieldPct: 100,
+  }
+];
