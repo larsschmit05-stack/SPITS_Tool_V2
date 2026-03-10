@@ -76,7 +76,7 @@ function resolveFlowMaterials(
 interface NodeFlowKpi {
   inflowRateUnitsPerHour: number | null;
   outflowRateUnitsPerHour: number | null;
-  loadPct: number | null;
+  utilizationPct: number | null;
 }
 
 function computeNodeFlowKpis(
@@ -121,7 +121,7 @@ function computeNodeFlowKpis(
         : upstreamOutflows.reduce((acc, v) => acc + (v ?? 0), 0);
 
     let outflowRateUnitsPerHour: number | null = inflowRateUnitsPerHour;
-    let loadPct: number | null = null;
+    let utilizationPct: number | null = null;
 
     if (node.nodeType === 'start') {
       if (node.supplyMode === 'fixed' && node.fixedSupplyAmount != null && node.fixedSupplyAmount > 0) {
@@ -139,7 +139,8 @@ function computeNodeFlowKpis(
         stepResult && stepResult.effectiveRateUnitsPerHour > 0 ? stepResult.effectiveRateUnitsPerHour : null;
 
       if (inflowRateUnitsPerHour !== null && effectiveRate !== null) {
-        loadPct = (inflowRateUnitsPerHour / effectiveRate) * 100;
+        // Builder-bezettingsgraad = actuele instroom / effectieve stapcapaciteit.
+        utilizationPct = (inflowRateUnitsPerHour / effectiveRate) * 100;
         const conversionRatio = stepResult?.conversionRatio && stepResult.conversionRatio > 0
           ? stepResult.conversionRatio
           : 1;
@@ -154,7 +155,7 @@ function computeNodeFlowKpis(
       outflowRateUnitsPerHour = inflowRateUnitsPerHour;
     }
 
-    kpis.set(node.id, { inflowRateUnitsPerHour, outflowRateUnitsPerHour, loadPct });
+    kpis.set(node.id, { inflowRateUnitsPerHour, outflowRateUnitsPerHour, utilizationPct });
 
     for (const nextId of outgoing.get(nodeId) ?? []) {
       indegree.set(nextId, (indegree.get(nextId) ?? 1) - 1);
@@ -1010,7 +1011,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                         </span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Load (inflow/capaciteit)</span>
+                        <span className="text-slate-500">Bezettingsgraad</span>
                         <span className={`font-semibold ${
                           flowLoadPct !== null && flowLoadPct > 90
                             ? 'text-red-600'
@@ -1496,7 +1497,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
                 isSelected={selectedNodeId === node.id}
                 isMultiSelected={multiSelectedNodeIds.includes(node.id)}
                 stepResult={stepResultByNodeId.get(node.id)}
-                flowLoadPct={flowKpiByNodeId.get(node.id)?.loadPct ?? null}
+                flowLoadPct={flowKpiByNodeId.get(node.id)?.utilizationPct ?? null}
                 isBottleneck={bottleneckStepId === node.id}
                 resolvedOutputMaterialName={resolvedOutMaterial ? `${resolvedOutMaterial.name} (${resolvedOutMaterial.unit})` : undefined}
                 onMouseDown={handleMouseDown}
@@ -1518,7 +1519,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
           key={selectedNode.id}
           node={selectedNode}
           stepResult={stepResultByNodeId.get(selectedNode.id)}
-          flowLoadPct={flowKpiByNodeId.get(selectedNode.id)?.loadPct ?? null}
+          flowLoadPct={flowKpiByNodeId.get(selectedNode.id)?.utilizationPct ?? null}
           isBottleneck={bottleneckStepId === selectedNode.id}
           onClose={() => setSelectedNodeId(null)}
           onNavigate={onNavigate}
