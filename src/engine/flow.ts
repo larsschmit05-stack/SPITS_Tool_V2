@@ -31,27 +31,42 @@ export function linearizeFlow(
 ): EngineFlowStep[] {
   const nodeMap = new Map<string, EngineFlowStep>(steps.map(s => [s.id, s]));
 
-  // Build outgoing adjacency: nodeId → target nodeId (linear: at most 1)
-  const next = new Map<string, string>();
+  // Build DAG adjacency for topological ordering.
+  const outgoing = new Map<string, string[]>();
+  const indegree = new Map<string, number>();
+  for (const s of steps) {
+    outgoing.set(s.id, []);
+    indegree.set(s.id, 0);
+  }
   for (const e of edges) {
     if (nodeMap.has(e.source) && nodeMap.has(e.target)) {
-      next.set(e.source, e.target);
+      outgoing.get(e.source)!.push(e.target);
+      indegree.set(e.target, (indegree.get(e.target) ?? 0) + 1);
     }
   }
 
-  const startNode = steps.find(s => s.type === 'start');
-  if (!startNode) return [];
+  const stepIndex = new Map(steps.map((s, i) => [s.id, i]));
+  const queue = steps
+    .filter(s => (indegree.get(s.id) ?? 0) === 0)
+    .sort((a, b) => {
+      const aIsStart = a.type === 'start' ? 0 : 1;
+      const bIsStart = b.type === 'start' ? 0 : 1;
+      if (aIsStart !== bIsStart) return aIsStart - bIsStart;
+      return (stepIndex.get(a.id) ?? 0) - (stepIndex.get(b.id) ?? 0);
+    })
+    .map(s => s.id);
 
   const ordered: EngineFlowStep[] = [];
-  const visited = new Set<string>();
-  let current: string | undefined = startNode.id;
-
-  while (current !== undefined && !visited.has(current)) {
-    visited.add(current);
+  while (queue.length > 0) {
+    const current = queue.shift()!;
     const node = nodeMap.get(current);
-    if (!node) break;
+    if (!node) continue;
     ordered.push(node);
-    current = next.get(current);
+    for (const next of outgoing.get(current) ?? []) {
+      const nextDeg = (indegree.get(next) ?? 0) - 1;
+      indegree.set(next, nextDeg);
+      if (nextDeg === 0) queue.push(next);
+    }
   }
 
   return ordered;

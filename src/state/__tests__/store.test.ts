@@ -5,6 +5,7 @@ import {
   duplicateScenarioFn,
   enforceScenarioConstraints,
   appReducer,
+  migrateLegacySourceMaterial,
 } from '../store';
 import type { ProjectState, Scenario } from '../types';
 
@@ -197,6 +198,26 @@ describe('appReducer - ADD_SCENARIO', () => {
     const stateWith2 = appReducer(baseState, { type: 'ADD_SCENARIO', payload: { name: 'S2' } });
     const stateWith3 = appReducer(stateWith2, { type: 'ADD_SCENARIO', payload: { name: 'S3' } });
     expect(stateWith3.scenarios).toHaveLength(2);
+  });
+});
+
+describe('migrateLegacySourceMaterial', () => {
+  it('maps legacy productMix on start node to outputMaterialId', () => {
+    const nodes = [
+      {
+        id: 'start-1',
+        nodeType: 'start' as const,
+        name: 'Bron',
+        position: { x: 0, y: 0 },
+        productMix: [
+          { id: 'pm-1', label: 'A', materialId: 'mat-a', quantity: 40 },
+          { id: 'pm-2', label: 'B', materialId: 'mat-b', quantity: 60 },
+        ],
+      },
+    ];
+
+    const migrated = migrateLegacySourceMaterial(nodes);
+    expect(migrated[0].outputMaterialId).toBe('mat-b');
   });
 });
 

@@ -56,6 +56,17 @@ function sumHoursByWeekday(hoursByWeekday: Department['hoursByWeekday']): number
   );
 }
 
+export function migrateLegacySourceMaterial(nodes: FlowNode[]): FlowNode[] {
+  return nodes.map((n) => {
+    if (n.nodeType !== 'start' || n.outputMaterialId) return n;
+    const mix = n.productMix ?? [];
+    if (mix.length === 0) return n;
+    const winner = [...mix].sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0))[0];
+    if (!winner?.materialId) return n;
+    return { ...n, outputMaterialId: winner.materialId };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Action types
 // ---------------------------------------------------------------------------
@@ -816,9 +827,14 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
           ...dedupedMigrated,
         ];
 
+        const migratedNodes: FlowNode[] = migrateLegacySourceMaterial(
+          (parsed.nodes ?? DEFAULT_PROJECT_STATE.nodes) as FlowNode[]
+        );
+
         return {
           ...DEFAULT_PROJECT_STATE,
           ...parsed,
+          nodes: migratedNodes,
           resources: migratedResources,
           templates: mergedTemplates,
           materials: parsed.materials ?? [],
