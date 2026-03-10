@@ -465,9 +465,14 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
   const isTimeStep = node.nodeType === 'timeStep';
   const isEnabled = node.enabled !== false;
 
-  const utilizationPct = stepResult?.utilizationAtTarget !== null && stepResult?.utilizationAtTarget !== undefined
-    ? stepResult.utilizationAtTarget * 100
-    : null;
+  // Bezettingsgraad op uurbasis: benodigde werkuren op doel / beschikbare effectieve uren.
+  // Dit blijft unit-consistent met de getoonde capaciteit in e/h.
+  const utilizationPct =
+    stepResult?.requiredWorkHoursAtTarget !== null &&
+    stepResult?.requiredWorkHoursAtTarget !== undefined &&
+    stepResult?.effectiveHours > 0
+      ? (stepResult.requiredWorkHoursAtTarget / stepResult.effectiveHours) * 100
+      : null;
 
   return (
     <div className="w-80 bg-white border-l border-slate-200 flex flex-col z-30 shadow-floating animate-in slide-in-from-right duration-200">
@@ -912,14 +917,6 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
                         <span className="font-semibold text-slate-800">
                           {stepResult.effectiveRateUnitsPerHour > 0
                             ? `${stepResult.effectiveRateUnitsPerHour.toFixed(1)} e/h`
-                            : '—'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Max throughput (horizon)</span>
-                        <span className="font-semibold text-slate-800">
-                          {stepResult.stepMaxGoodUnitsOverHorizon > 0
-                            ? `${Math.round(stepResult.stepMaxGoodUnitsOverHorizon)} st`
                             : '—'}
                         </span>
                       </div>
