@@ -208,37 +208,8 @@ export function validateFlowGraph(
     incoming.get(e.target)!.push(e.source);
   }
 
-  // Check for branches (any node with >1 outgoing edge)
-  for (const [id, targets] of outgoing) {
-    if (targets.length > 1) {
-      issues.push(
-        error(
-          'ERR_FLOW_BRANCH',
-          `Node "${id}" has ${targets.length} outgoing edges — flow must be linear`,
-          'flow',
-          id
-        )
-      );
-    }
-  }
-
-  // Check for merges (any node with >1 incoming edge)
-  for (const [id, sources] of incoming) {
-    if (sources.length > 1) {
-      issues.push(
-        error(
-          'ERR_FLOW_MERGE',
-          `Node "${id}" has ${sources.length} incoming edges — flow must be linear`,
-          'flow',
-          id
-        )
-      );
-    }
-  }
-
   // Detect cycles via DFS and disconnected nodes
-  if (starts.length === 1) {
-    const startId = starts[0].id;
+  if (starts.length >= 1) {
     const visited = new Set<string>();
     const inStack = new Set<string>();
     let hasCycle = false;
@@ -248,25 +219,22 @@ export function validateFlowGraph(
       if (visited.has(id)) return;
       visited.add(id);
       inStack.add(id);
-      for (const next of outgoing.get(id) ?? []) {
-        dfs(next);
-      }
+      for (const next of outgoing.get(id) ?? []) dfs(next);
       inStack.delete(id);
     };
 
-    dfs(startId);
+    for (const s of starts) dfs(s.id);
 
     if (hasCycle) {
       issues.push(error('ERR_FLOW_CYCLE', 'Flow contains a cycle — must be a DAG', 'flow'));
     }
 
-    // Disconnected nodes (not reachable from start)
     for (const s of steps) {
       if (!visited.has(s.id)) {
         issues.push(
           error(
             'ERR_FLOW_DISCONNECTED',
-            `Node "${s.id}" is not reachable from the start node`,
+            `Node "${s.id}" is not reachable from any start node`,
             'flow',
             s.id
           )

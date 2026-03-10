@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppState } from './src/state/store';
-import type { FlowNode, FlowEdge, ProductMixEntry, Material } from './src/state/types';
+import type { FlowNode, FlowEdge, Material } from './src/state/types';
 import type { StepResult } from './src/engine/types';
 import { run } from './src/engine/engine';
+import { NumericInput } from './src/components/NumericInput';
 import {
   Plus, MousePointer2, Move, Trash2, Settings2, PlayCircle, StopCircle,
   Clock, Copy, X, ExternalLink, AlertTriangle, CheckCircle2, Zap, Package, ChevronDown, ChevronRight
@@ -21,8 +22,8 @@ const NODE_HEIGHT = 96;
 function resolveFlowMaterials(
   nodes: FlowNode[],
   edges: FlowEdge[],
-): Map<string, { inputId?: string; outputId?: string }> {
-  const result = new Map<string, { inputId?: string; outputId?: string }>();
+): Map<string, { inputIds: string[]; outputId?: string }> {
+  const result = new Map<string, { inputIds: string[]; outputId?: string }>();
   const successors = new Map<string, string[]>();
   const incoming = new Map<string, string[]>();
   for (const e of edges) {
@@ -41,7 +42,7 @@ function resolveFlowMaterials(
   // input is ambiguous and must be selected explicitly on the step.
   const queue: string[] = [];
   for (const s of startNodes) {
-    result.set(s.id, { inputId: undefined, outputId: s.outputMaterialId });
+    result.set(s.id, { inputIds: [], outputId: s.outputMaterialId });
     queue.push(s.id);
   }
   while (queue.length) {
@@ -50,23 +51,21 @@ function resolveFlowMaterials(
       const child = nodeById.get(childId);
       if (!child) continue;
 
-      const explicitInput = child.inputMaterialId || undefined;
-      const upstreamOutputs = new Set(
+      const upstreamOutputs = Array.from(new Set(
         (incoming.get(childId) ?? [])
           .map(sourceId => result.get(sourceId)?.outputId)
           .filter((id): id is string => Boolean(id))
-      );
-      const resolvedInputId = explicitInput
-        ?? (upstreamOutputs.size === 1 ? [...upstreamOutputs][0] : undefined);
-      const resolvedOutputId = child.outputMaterialId ?? resolvedInputId;
+      ));
+      const resolvedOutputId = child.outputMaterialId ?? (upstreamOutputs.length === 1 ? upstreamOutputs[0] : undefined);
       const prev = result.get(childId);
       const changed =
         !prev ||
-        prev.inputId !== resolvedInputId ||
+        prev.inputIds.length !== upstreamOutputs.length ||
+        prev.inputIds.some((id, i) => id !== upstreamOutputs[i]) ||
         prev.outputId !== resolvedOutputId;
 
       if (changed) {
-        result.set(childId, { inputId: resolvedInputId, outputId: resolvedOutputId });
+        result.set(childId, { inputIds: upstreamOutputs, outputId: resolvedOutputId });
         queue.push(childId);
       }
     }
@@ -405,7 +404,7 @@ interface NodeDetailPanelProps {
 }
 
 const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isBottleneck = false, onClose, onNavigate }) => {
-  const { state, updateNode, setNodeResource, setNodeDuration, deleteNode, setNodeMaterialConversion, clearNodeMaterialConversion, setSourceProductMix } = useAppState();
+  const { state, updateNode, setNodeResource, setNodeDuration, deleteNode } = useAppState();
   const [showConversion, setShowConversion] = useState(false);
 
   // Resolved material flow for this node (input from upstream, output to downstream)
@@ -413,7 +412,6 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
     () => resolveFlowMaterials(state.nodes, state.edges),
     [state.nodes, state.edges],
   );
-  const resolvedForNode = resolvedMaterials.get(node.id);
   const upstreamOutputIds = Array.from(new Set(
     state.edges
       .filter(e => e.target === node.id)
@@ -813,55 +811,38 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
                     </div>
                   )}
 
-                  {/* Upstream material — shown when no explicit inputMaterialId is set */}
-                  {upstreamMaterial && !node.inputMaterialId && (
+                  {/* Upstream material(s) are always inherited from connected upstream nodes */}
+                  {upstreamMaterial && (
                     <div className="flex items-center gap-2 text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
                       <ChevronRight className="w-3 h-3 flex-shrink-0" />
                       <span>Van upstream: <strong>{upstreamMaterial.name} ({upstreamMaterial.unit})</strong></span>
                     </div>
                   )}
-                  {upstreamOutputIds.length > 1 && !node.inputMaterialId && (
-                    <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>Meerdere upstream materialen gedetecteerd — kies expliciet een input materiaal.</span>
+                  {upstreamOutputIds.length > 1 && (
+                    <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 space-y-1">
+                      <div className="font-medium">Inputs van upstream ({upstreamOutputIds.length})</div>
+                      <ul className="list-disc list-inside text-[11px]">
+                        {upstreamOutputIds.map((id) => {
+                          const m = materialById(id);
+                          return <li key={id}>{m ? `${m.name} (${m.unit})` : id}</li>;
+                        })}
+                      </ul>
                     </div>
                   )}
 
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                       Input materiaal
-                      {upstreamMaterial && !node.inputMaterialId && (
-                        <span className="ml-1 normal-case font-normal text-indigo-500">(overneembaar van upstream)</span>
-                      )}
+                      <span className="ml-1 normal-case font-normal text-indigo-500">(automatisch van upstream)</span>
                     </label>
-                    <select
-                      value={node.inputMaterialId ?? ''}
-                      onChange={e => {
-                        const val = e.target.value;
-                        if (val) {
-                          setNodeMaterialConversion(
-                            node.id,
-                            val,
-                            node.outputMaterialId ?? val,
-                            node.conversionRatio ?? 1
-                          );
-                        } else {
-                          // Clear inputMaterialId — inherit from upstream
-                          setNodeMaterialConversion(
-                            node.id,
-                            '',
-                            node.outputMaterialId ?? '',
-                            node.conversionRatio ?? 1
-                          );
-                        }
-                      }}
-                      className="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
-                    >
-                      <option value="">{upstreamMaterial ? `↑ ${upstreamMaterial.name} (van upstream)` : '— Geen —'}</option>
-                      {(state.materials ?? []).map(m => (
-                        <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
-                      ))}
-                    </select>
+                    <div className="w-full text-xs border border-slate-200 rounded-lg px-2 py-2 bg-slate-50 text-slate-700 min-h-[30px]">
+                      {upstreamOutputIds.length === 0 && '— Geen upstream input —'}
+                      {upstreamOutputIds.length === 1 && (() => {
+                        const m = materialById(upstreamOutputIds[0]);
+                        return m ? `${m.name} (${m.unit})` : upstreamOutputIds[0];
+                      })()}
+                      {upstreamOutputIds.length > 1 && `${upstreamOutputIds.length} materialen van upstream (zie lijst hierboven)`}
+                    </div>
                   </div>
 
                   <div>
@@ -869,14 +850,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
                     <select
                       value={node.outputMaterialId ?? ''}
                       onChange={e => {
-                        if (e.target.value) {
-                          setNodeMaterialConversion(
-                            node.id,
-                            node.inputMaterialId ?? e.target.value,
-                            e.target.value,
-                            node.conversionRatio ?? 1
-                          );
-                        }
+                        updateNode(node.id, { outputMaterialId: e.target.value || undefined });
                       }}
                       className="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
                     >
@@ -897,12 +871,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
                       onChange={e => {
                         const v = parseFloat(e.target.value);
                         if (!isNaN(v) && v > 0) {
-                          setNodeMaterialConversion(
-                            node.id,
-                            node.inputMaterialId ?? '',
-                            node.outputMaterialId ?? '',
-                            v
-                          );
+                          updateNode(node.id, { conversionRatio: v });
                         }
                       }}
                       className="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500"
@@ -911,9 +880,9 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
                     <p className="text-[10px] text-slate-400 mt-1">Bijv. 57.14 sachets per pot</p>
                   </div>
 
-                  {(node.inputMaterialId || node.outputMaterialId || (node.conversionRatio && node.conversionRatio !== 1)) && (
+                  {(node.outputMaterialId || (node.conversionRatio && node.conversionRatio !== 1)) && (
                     <button
-                      onClick={() => clearNodeMaterialConversion(node.id)}
+                      onClick={() => updateNode(node.id, { inputMaterialId: undefined, outputMaterialId: undefined, conversionRatio: undefined })}
                       className="text-xs text-slate-400 hover:text-red-500 font-medium transition-colors"
                     >
                       Conversie wissen
@@ -1190,8 +1159,6 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
     if (!srcNode || !tgtNode) return;
     if (srcNode.nodeType === 'end') return;           // end has no out-port
     if (tgtNode.nodeType === 'start') return;          // nothing goes into start
-    if (srcNode.nodeType === 'start' && tgtNode.nodeType === 'start') return; // no start→start
-
     addEdge(connectingNodeId, targetId);
     setConnectingNodeId(null);
   };
