@@ -24,30 +24,51 @@ function resolveFlowMaterials(
 ): Map<string, { inputId?: string; outputId?: string }> {
   const result = new Map<string, { inputId?: string; outputId?: string }>();
   const successors = new Map<string, string[]>();
+  const incoming = new Map<string, string[]>();
   for (const e of edges) {
     if (!successors.has(e.source)) successors.set(e.source, []);
     successors.get(e.source)!.push(e.target);
+    if (!incoming.has(e.target)) incoming.set(e.target, []);
+    incoming.get(e.target)!.push(e.source);
   }
-  const startNode = nodes.find(n => n.nodeType === 'start');
-  if (!startNode) return result;
 
-  result.set(startNode.id, { inputId: undefined, outputId: startNode.outputMaterialId });
-  const queue = [startNode.id];
-  const visited = new Set([startNode.id]);
+  const nodeById = new Map(nodes.map(n => [n.id, n]));
+  const startNodes = nodes.filter(n => n.nodeType === 'start');
+  if (startNodes.length === 0) return result;
 
+  // Support multiple sources. Downstream inheritance only occurs when there is
+  // exactly one unique upstream material; with multiple distinct materials the
+  // input is ambiguous and must be selected explicitly on the step.
+  const queue: string[] = [];
+  for (const s of startNodes) {
+    result.set(s.id, { inputId: undefined, outputId: s.outputMaterialId });
+    queue.push(s.id);
+  }
   while (queue.length) {
     const parentId = queue.shift()!;
-    const parentOutId = result.get(parentId)?.outputId;
     for (const childId of (successors.get(parentId) ?? [])) {
-      if (visited.has(childId)) continue;
-      visited.add(childId);
-      queue.push(childId);
-      const child = nodes.find(n => n.id === childId);
+      const child = nodeById.get(childId);
       if (!child) continue;
-      // Explicit setting wins; fall back to upstream's resolved output
-      const resolvedInputId = child.inputMaterialId ?? parentOutId;
+
+      const explicitInput = child.inputMaterialId || undefined;
+      const upstreamOutputs = new Set(
+        (incoming.get(childId) ?? [])
+          .map(sourceId => result.get(sourceId)?.outputId)
+          .filter((id): id is string => Boolean(id))
+      );
+      const resolvedInputId = explicitInput
+        ?? (upstreamOutputs.size === 1 ? [...upstreamOutputs][0] : undefined);
       const resolvedOutputId = child.outputMaterialId ?? resolvedInputId;
-      result.set(childId, { inputId: resolvedInputId, outputId: resolvedOutputId });
+      const prev = result.get(childId);
+      const changed =
+        !prev ||
+        prev.inputId !== resolvedInputId ||
+        prev.outputId !== resolvedOutputId;
+
+      if (changed) {
+        result.set(childId, { inputId: resolvedInputId, outputId: resolvedOutputId });
+        queue.push(childId);
+      }
     }
   }
   return result;
@@ -393,15 +414,17 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
     [state.nodes, state.edges],
   );
   const resolvedForNode = resolvedMaterials.get(node.id);
-  const upstreamOutputId = (() => {
-    // Find the upstream node's resolved output (what flows INTO this node)
-    const incomingEdge = state.edges.find(e => e.target === node.id);
-    if (!incomingEdge) return undefined;
-    return resolvedMaterials.get(incomingEdge.source)?.outputId;
-  })();
+  const upstreamOutputIds = Array.from(new Set(
+    state.edges
+      .filter(e => e.target === node.id)
+      .map(e => resolvedMaterials.get(e.source)?.outputId)
+      .filter((id): id is string => Boolean(id))
+  ));
   const materialById = (id?: string): Material | undefined =>
     id ? (state.materials ?? []).find(m => m.id === id) : undefined;
-  const upstreamMaterial = materialById(upstreamOutputId);
+  const upstreamMaterial = upstreamOutputIds.length === 1
+    ? materialById(upstreamOutputIds[0])
+    : undefined;
 
   const [nameVal, setNameVal] = useState(node.name);
   const [durVal, setDurVal] = useState<string>(
@@ -795,6 +818,12 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
                     <div className="flex items-center gap-2 text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
                       <ChevronRight className="w-3 h-3 flex-shrink-0" />
                       <span>Van upstream: <strong>{upstreamMaterial.name} ({upstreamMaterial.unit})</strong></span>
+                    </div>
+                  )}
+                  {upstreamOutputIds.length > 1 && !node.inputMaterialId && (
+                    <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>Meerdere upstream materialen gedetecteerd — kies expliciet een input materiaal.</span>
                     </div>
                   )}
 
