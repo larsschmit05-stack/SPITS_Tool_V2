@@ -73,6 +73,98 @@ function resolveFlowMaterials(
   return result;
 }
 
+interface NodeFlowKpi {
+  inflowRateUnitsPerHour: number | null;
+  outflowRateUnitsPerHour: number | null;
+  loadPct: number | null;
+}
+
+function computeNodeFlowKpis(
+  nodes: FlowNode[],
+  edges: FlowEdge[],
+  stepResultByNodeId: Map<string, StepResult>,
+): Map<string, NodeFlowKpi> {
+  const kpis = new Map<string, NodeFlowKpi>();
+  const incoming = new Map<string, string[]>();
+  const outgoing = new Map<string, string[]>();
+
+  for (const e of edges) {
+    if (!incoming.has(e.target)) incoming.set(e.target, []);
+    incoming.get(e.target)!.push(e.source);
+    if (!outgoing.has(e.source)) outgoing.set(e.source, []);
+    outgoing.get(e.source)!.push(e.target);
+  }
+
+  const indegree = new Map<string, number>();
+  for (const n of nodes) indegree.set(n.id, incoming.get(n.id)?.length ?? 0);
+
+  const queue: string[] = nodes.filter(n => (indegree.get(n.id) ?? 0) === 0).map(n => n.id);
+  const nodeById = new Map(nodes.map(n => [n.id, n]));
+
+  while (queue.length) {
+    const nodeId = queue.shift()!;
+    const node = nodeById.get(nodeId);
+    if (!node) continue;
+
+    const upstreamIds = incoming.get(nodeId) ?? [];
+    const upstreamOutflows = upstreamIds
+      .map(id => kpis.get(id)?.outflowRateUnitsPerHour)
+      .filter((v): v is number | null => v !== undefined);
+
+    const allUpstreamKnown = upstreamIds.length > 0 && upstreamOutflows.length === upstreamIds.length;
+    const anyUpstreamUnknown = upstreamOutflows.some(v => v === null);
+    const inflowRateUnitsPerHour =
+      upstreamIds.length === 0
+        ? null
+        : !allUpstreamKnown || anyUpstreamUnknown
+        ? null
+        : upstreamOutflows.reduce((acc, v) => acc + (v ?? 0), 0);
+
+    let outflowRateUnitsPerHour: number | null = inflowRateUnitsPerHour;
+    let loadPct: number | null = null;
+
+    if (node.nodeType === 'start') {
+      if (node.supplyMode === 'fixed' && node.fixedSupplyAmount != null && node.fixedSupplyAmount > 0) {
+        const periodHours: Record<string, number> = { hour: 1, day: 24, week: 168 };
+        const ph = periodHours[node.fixedSupplyPeriodUnit ?? 'week'] ?? 168;
+        outflowRateUnitsPerHour = node.fixedSupplyAmount / ph;
+      } else {
+        outflowRateUnitsPerHour = null;
+      }
+    }
+
+    if (node.nodeType === 'resourceStep' || node.nodeType === 'timeStep') {
+      const stepResult = stepResultByNodeId.get(node.id);
+      const effectiveRate =
+        stepResult && stepResult.effectiveRateUnitsPerHour > 0 ? stepResult.effectiveRateUnitsPerHour : null;
+
+      if (inflowRateUnitsPerHour !== null && effectiveRate !== null) {
+        loadPct = (inflowRateUnitsPerHour / effectiveRate) * 100;
+        const conversionRatio = stepResult?.conversionRatio && stepResult.conversionRatio > 0
+          ? stepResult.conversionRatio
+          : 1;
+        const yieldFactor = stepResult?.yieldPct !== undefined ? stepResult.yieldPct / 100 : 1;
+        outflowRateUnitsPerHour = Math.min(inflowRateUnitsPerHour, effectiveRate) * conversionRatio * yieldFactor;
+      } else {
+        outflowRateUnitsPerHour = null;
+      }
+    }
+
+    if (node.nodeType === 'end') {
+      outflowRateUnitsPerHour = inflowRateUnitsPerHour;
+    }
+
+    kpis.set(node.id, { inflowRateUnitsPerHour, outflowRateUnitsPerHour, loadPct });
+
+    for (const nextId of outgoing.get(nodeId) ?? []) {
+      indegree.set(nextId, (indegree.get(nextId) ?? 1) - 1);
+      if ((indegree.get(nextId) ?? 0) === 0) queue.push(nextId);
+    }
+  }
+
+  return kpis;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -261,6 +353,7 @@ interface NodeComponentProps {
   isSelected: boolean;
   isMultiSelected?: boolean;
   stepResult?: StepResult;
+  flowLoadPct?: number | null;
   isBottleneck?: boolean;
   /** Resolved output material name (from flow propagation) shown as badge on the node. */
   resolvedOutputMaterialName?: string;
@@ -271,7 +364,7 @@ interface NodeComponentProps {
 }
 
 const NodeComponent: React.FC<NodeComponentProps> = ({
-  node, isSelected, isMultiSelected, stepResult, isBottleneck = false,
+  node, isSelected, isMultiSelected, stepResult, flowLoadPct = null, isBottleneck = false,
   resolvedOutputMaterialName,
   onMouseDown, onContextMenu, onPortMouseDown, onMouseUp
 }) => {
@@ -327,8 +420,8 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
               <>
                 <div className="flex gap-2">
                   <span>{stepResult.effectiveRateUnitsPerHour > 0 ? `${stepResult.effectiveRateUnitsPerHour.toFixed(1)} e/h` : '—'}</span>
-                  <span className={stepResult.utilizationAtTarget !== null && stepResult.utilizationAtTarget > 0.9 ? 'text-red-500 font-semibold' : ''}>
-                    {stepResult.utilizationAtTarget !== null ? `${(stepResult.utilizationAtTarget * 100).toFixed(0)}%` : '—'}
+                  <span className={flowLoadPct !== null && flowLoadPct > 90 ? 'text-red-500 font-semibold' : ''}>
+                    {flowLoadPct !== null ? `${flowLoadPct.toFixed(0)}%` : '—'}
                   </span>
                 </div>
               </>
@@ -355,7 +448,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
             }
             {stepResult?.utilizationAtTarget != null && node.supplyMode === 'fixed' && (
               <div className={stepResult.utilizationAtTarget >= 0.9 ? 'text-red-500 font-semibold' : 'text-slate-500'}>
-                {(stepResult.utilizationAtTarget * 100).toFixed(0)}% bezetting
+                {(stepResult.utilizationAtTarget * 100).toFixed(0)}% target
               </div>
             )}
           </div>
@@ -398,12 +491,13 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
 interface NodeDetailPanelProps {
   node: FlowNode;
   stepResult?: StepResult;
+  flowLoadPct?: number | null;
   isBottleneck?: boolean;
   onClose: () => void;
   onNavigate?: (tab: string) => void;
 }
 
-const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isBottleneck = false, onClose, onNavigate }) => {
+const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flowLoadPct = null, isBottleneck = false, onClose, onNavigate }) => {
   const { state, updateNode, setNodeResource, setNodeDuration, deleteNode } = useAppState();
   const [showConversion, setShowConversion] = useState(false);
 
@@ -465,14 +559,9 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
   const isTimeStep = node.nodeType === 'timeStep';
   const isEnabled = node.enabled !== false;
 
-  // Bezettingsgraad op uurbasis: benodigde werkuren op doel / beschikbare effectieve uren.
-  // Dit blijft unit-consistent met de getoonde capaciteit in e/h.
-  const utilizationPct =
-    stepResult?.requiredWorkHoursAtTarget !== null &&
-    stepResult?.requiredWorkHoursAtTarget !== undefined &&
-    stepResult?.effectiveHours > 0
-      ? (stepResult.requiredWorkHoursAtTarget / stepResult.effectiveHours) * 100
-      : null;
+  const targetUtilizationPct = stepResult?.utilizationAtTarget != null
+    ? stepResult.utilizationAtTarget * 100
+    : null;
 
   return (
     <div className="w-80 bg-white border-l border-slate-200 flex flex-col z-30 shadow-floating animate-in slide-in-from-right duration-200">
@@ -626,7 +715,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
                   </div>
                   {stepResult.utilizationAtTarget != null && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Bezettingsgraad</span>
+                      <span className="text-slate-500">Target-bezetting</span>
                       <span className={`font-semibold ${stepResult.utilizationAtTarget >= 0.9 ? 'text-red-600' : 'text-emerald-600'}`}>
                         {(stepResult.utilizationAtTarget * 100).toFixed(1)}%
                       </span>
@@ -921,26 +1010,32 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
                         </span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Bezettingsgraad</span>
+                        <span className="text-slate-500">Load (inflow/capaciteit)</span>
                         <span className={`font-semibold ${
-                          utilizationPct !== null && utilizationPct > 90
+                          flowLoadPct !== null && flowLoadPct > 90
                             ? 'text-red-600'
-                            : utilizationPct !== null && utilizationPct > 75
+                            : flowLoadPct !== null && flowLoadPct > 75
                             ? 'text-amber-600'
                             : 'text-emerald-600'
                         }`}>
-                          {utilizationPct !== null ? `${utilizationPct.toFixed(0)}%` : '—'}
+                          {flowLoadPct !== null ? `${flowLoadPct.toFixed(0)}%` : '—'}
                         </span>
                       </div>
                       {/* Utilization bar */}
-                      {utilizationPct !== null && (
+                      {flowLoadPct !== null && (
                         <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1">
                           <div
                             className={`h-1.5 rounded-full transition-all ${
-                              utilizationPct > 90 ? 'bg-red-500' : utilizationPct > 75 ? 'bg-amber-500' : 'bg-emerald-500'
+                              flowLoadPct > 90 ? 'bg-red-500' : flowLoadPct > 75 ? 'bg-amber-500' : 'bg-emerald-500'
                             }`}
-                            style={{ width: `${Math.min(100, utilizationPct)}%` }}
+                            style={{ width: `${Math.min(100, flowLoadPct)}%` }}
                           />
+                        </div>
+                      )}
+                      {targetUtilizationPct !== null && (
+                        <div className="flex justify-between text-[11px] text-slate-400 pt-1">
+                          <span>Target-bezetting (scenario)</span>
+                          <span>{targetUtilizationPct.toFixed(1)}%</span>
                         </div>
                       )}
                     </>
@@ -964,7 +1059,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
                     </div>
                   )}
 
-                  {!isBottleneck && isResourceStep && utilizationPct !== null && utilizationPct < 90 && (
+                  {!isBottleneck && isResourceStep && flowLoadPct !== null && flowLoadPct < 90 && (
                     <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-2 mt-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Voldoende capaciteit beschikbaar</span>
@@ -1078,14 +1173,19 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
   }, [state.nodes, state.edges, state.activeScenarioId, state.resources, state.departments, state.scenarios]);
 
   // --- Build step result lookup and bottleneck tracking ---
-  const stepResultByNodeId = new Map<string, StepResult>();
   const activeResult = state.latestRunResult?.baseline;
-  const bottleneckStepId = activeResult?.bottleneck?.stepId ?? null;
-  if (activeResult?.steps) {
-    for (const s of activeResult.steps) {
-      stepResultByNodeId.set(s.stepId, s);
+  const stepResultByNodeId = useMemo(() => {
+    const lookup = new Map<string, StepResult>();
+    if (activeResult?.steps) {
+      for (const s of activeResult.steps) lookup.set(s.stepId, s);
     }
-  }
+    return lookup;
+  }, [activeResult?.steps]);
+  const flowKpiByNodeId = useMemo(
+    () => computeNodeFlowKpis(nodes, edges, stepResultByNodeId),
+    [nodes, edges, stepResultByNodeId],
+  );
+  const bottleneckStepId = activeResult?.bottleneck?.stepId ?? null;
 
   // --- Topology counts for toolbar ---
   const sourceCount = countSources(nodes);
@@ -1396,6 +1496,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
                 isSelected={selectedNodeId === node.id}
                 isMultiSelected={multiSelectedNodeIds.includes(node.id)}
                 stepResult={stepResultByNodeId.get(node.id)}
+                flowLoadPct={flowKpiByNodeId.get(node.id)?.loadPct ?? null}
                 isBottleneck={bottleneckStepId === node.id}
                 resolvedOutputMaterialName={resolvedOutMaterial ? `${resolvedOutMaterial.name} (${resolvedOutMaterial.unit})` : undefined}
                 onMouseDown={handleMouseDown}
@@ -1417,6 +1518,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
           key={selectedNode.id}
           node={selectedNode}
           stepResult={stepResultByNodeId.get(selectedNode.id)}
+          flowLoadPct={flowKpiByNodeId.get(selectedNode.id)?.loadPct ?? null}
           isBottleneck={bottleneckStepId === selectedNode.id}
           onClose={() => setSelectedNodeId(null)}
           onNavigate={onNavigate}
