@@ -1,7 +1,7 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAppState } from './src/state/store';
-import type { FlowNode, FlowEdge, ProductMixEntry } from './src/state/types';
+import type { FlowNode, FlowEdge, ProductMixEntry, Material } from './src/state/types';
 import type { StepResult } from './src/engine/types';
 import { run } from './src/engine/engine';
 import {
@@ -11,6 +11,47 @@ import {
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 96;
+
+// ---------------------------------------------------------------------------
+// Material flow resolution
+// Walks the graph from the start node and resolves the effective input/output
+// material at each node. Steps without an explicit material inherit from upstream.
+// ---------------------------------------------------------------------------
+
+function resolveFlowMaterials(
+  nodes: FlowNode[],
+  edges: FlowEdge[],
+): Map<string, { inputId?: string; outputId?: string }> {
+  const result = new Map<string, { inputId?: string; outputId?: string }>();
+  const successors = new Map<string, string[]>();
+  for (const e of edges) {
+    if (!successors.has(e.source)) successors.set(e.source, []);
+    successors.get(e.source)!.push(e.target);
+  }
+  const startNode = nodes.find(n => n.nodeType === 'start');
+  if (!startNode) return result;
+
+  result.set(startNode.id, { inputId: undefined, outputId: startNode.outputMaterialId });
+  const queue = [startNode.id];
+  const visited = new Set([startNode.id]);
+
+  while (queue.length) {
+    const parentId = queue.shift()!;
+    const parentOutId = result.get(parentId)?.outputId;
+    for (const childId of (successors.get(parentId) ?? [])) {
+      if (visited.has(childId)) continue;
+      visited.add(childId);
+      queue.push(childId);
+      const child = nodes.find(n => n.id === childId);
+      if (!child) continue;
+      // Explicit setting wins; fall back to upstream's resolved output
+      const resolvedInputId = child.inputMaterialId ?? parentOutId;
+      const resolvedOutputId = child.outputMaterialId ?? resolvedInputId;
+      result.set(childId, { inputId: resolvedInputId, outputId: resolvedOutputId });
+    }
+  }
+  return result;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -74,8 +115,8 @@ const AddStepModal = ({
 }) => {
   if (!isOpen) return null;
 
-  const hasStart = nodes.some(n => n.nodeType === 'start');
   const hasEnd = nodes.some(n => n.nodeType === 'end');
+  const sourcesCount = nodes.filter(n => n.nodeType === 'start').length;
 
   const nextPos = () => {
     const last = nodes.filter(n => n.nodeType !== 'start' && n.nodeType !== 'end').pop();
@@ -89,31 +130,31 @@ const AddStepModal = ({
         onClick={e => e.stopPropagation()}
       >
         <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-          <h3 className="text-base font-bold text-slate-900">Add to Flow</h3>
+          <h3 className="text-base font-bold text-slate-900">Toevoegen aan flow</h3>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-md transition-colors">
             <X className="w-4 h-4 text-slate-500" />
           </button>
         </div>
 
         <div className="p-5 space-y-2.5">
-          {/* Source */}
+          {/* Source — multiple allowed */}
           <button
-            disabled={hasStart}
             onClick={() => {
-              onAddNode({ nodeType: 'start', name: 'Source', position: { x: 60, y: 200 } });
+              onAddNode({
+                nodeType: 'start',
+                name: sourcesCount === 0 ? 'Bron' : `Bron ${sourcesCount + 1}`,
+                position: { x: 60, y: 200 + sourcesCount * 130 },
+                supplyMode: 'unlimited',
+              });
               onClose();
             }}
-            className={`w-full p-3.5 rounded-lg border text-left transition-all ${
-              hasStart
-                ? 'opacity-40 border-slate-200 cursor-not-allowed bg-slate-50'
-                : 'border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50'
-            }`}
+            className="w-full p-3.5 rounded-lg border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 text-left transition-all"
           >
             <div className="flex items-center gap-3">
-              <PlayCircle className={`w-5 h-5 ${hasStart ? 'text-slate-400' : 'text-emerald-600'}`} />
+              <PlayCircle className="w-5 h-5 text-emerald-600" />
               <div>
                 <div className="font-bold text-sm text-slate-900">Bron (Source)</div>
-                <div className="text-xs text-slate-500">Materiaal ingang — slechts 1 toegestaan</div>
+                <div className="text-xs text-slate-500">Startpunt van materiaalstroom — meerdere bronnen zijn toegestaan</div>
               </div>
             </div>
           </button>
@@ -201,6 +242,8 @@ interface NodeComponentProps {
   isMultiSelected?: boolean;
   stepResult?: StepResult;
   isBottleneck?: boolean;
+  /** Resolved output material name (from flow propagation) shown as badge on the node. */
+  resolvedOutputMaterialName?: string;
   onMouseDown: (e: React.MouseEvent, id: string) => void;
   onContextMenu: (e: React.MouseEvent, id: string) => void;
   onPortMouseDown: (e: React.MouseEvent, id: string, type: 'source' | 'target') => void;
@@ -209,6 +252,7 @@ interface NodeComponentProps {
 
 const NodeComponent: React.FC<NodeComponentProps> = ({
   node, isSelected, isMultiSelected, stepResult, isBottleneck = false,
+  resolvedOutputMaterialName,
   onMouseDown, onContextMenu, onPortMouseDown, onMouseUp
 }) => {
   const colors = nodeTypeColor(node.nodeType, isBottleneck);
@@ -278,6 +322,30 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
             {hasDuration ? `${node.durationMinutesPerUnit} min/eenheid` : <span className="italic text-amber-500">Vul duur in</span>}
           </div>
         )}
+        {/* Source node: material + supply info */}
+        {node.nodeType === 'start' && (
+          <div className="mt-1 space-y-px text-[10px]">
+            {resolvedOutputMaterialName
+              ? <div className="text-indigo-600 font-medium truncate">↳ {resolvedOutputMaterialName}</div>
+              : <div className="italic text-amber-500">Geen materiaal</div>
+            }
+            {node.supplyMode === 'fixed' && node.fixedSupplyAmount != null
+              ? <div className="text-amber-700 font-semibold">{node.fixedSupplyAmount}/{node.fixedSupplyPeriodUnit ?? 'week'} — begrensd</div>
+              : <div className="text-slate-400">Onbeperkt aanbod</div>
+            }
+            {stepResult?.utilizationAtTarget != null && node.supplyMode === 'fixed' && (
+              <div className={stepResult.utilizationAtTarget >= 0.9 ? 'text-red-500 font-semibold' : 'text-slate-500'}>
+                {(stepResult.utilizationAtTarget * 100).toFixed(0)}% bezetting
+              </div>
+            )}
+          </div>
+        )}
+        {/* Non-source material flow badge */}
+        {resolvedOutputMaterialName && node.nodeType !== 'end' && node.nodeType !== 'start' && (
+          <div className="mt-1 text-[9px] text-indigo-600 font-medium truncate">
+            ↳ {resolvedOutputMaterialName}
+          </div>
+        )}
       </div>
 
       {/* Left port (target) — all except start */}
@@ -318,6 +386,22 @@ interface NodeDetailPanelProps {
 const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isBottleneck = false, onClose, onNavigate }) => {
   const { state, updateNode, setNodeResource, setNodeDuration, deleteNode, setNodeMaterialConversion, clearNodeMaterialConversion, setSourceProductMix } = useAppState();
   const [showConversion, setShowConversion] = useState(false);
+
+  // Resolved material flow for this node (input from upstream, output to downstream)
+  const resolvedMaterials = useMemo(
+    () => resolveFlowMaterials(state.nodes, state.edges),
+    [state.nodes, state.edges],
+  );
+  const resolvedForNode = resolvedMaterials.get(node.id);
+  const upstreamOutputId = (() => {
+    // Find the upstream node's resolved output (what flows INTO this node)
+    const incomingEdge = state.edges.find(e => e.target === node.id);
+    if (!incomingEdge) return undefined;
+    return resolvedMaterials.get(incomingEdge.source)?.outputId;
+  })();
+  const materialById = (id?: string): Material | undefined =>
+    id ? (state.materials ?? []).find(m => m.id === id) : undefined;
+  const upstreamMaterial = materialById(upstreamOutputId);
 
   const [nameVal, setNameVal] = useState(node.name);
   const [durVal, setDurVal] = useState<string>(
@@ -380,8 +464,8 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {/* Terminal nodes */}
-        {isTerminal && node.nodeType === 'end' && (
+        {/* End node */}
+        {node.nodeType === 'end' && (
           <div className="p-5 text-center">
             <div className="mb-3 p-3 bg-slate-100 rounded-xl inline-block">
               <StopCircle className="w-6 h-6 text-slate-500" />
@@ -390,90 +474,169 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
           </div>
         )}
 
-        {/* Start node: product mix editor */}
-        {isTerminal && node.nodeType === 'start' && (
-          <div className="p-4 space-y-4">
+        {/* ---------------------------------------------------------------- */}
+        {/* Source (start) node — overhauled panel                           */}
+        {/* ---------------------------------------------------------------- */}
+        {node.nodeType === 'start' && (
+          <div className="p-4 space-y-5">
+
+            {/* Naam */}
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Package className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="text-xs font-bold text-slate-700">Productmix</span>
-              </div>
-              {(state.materials ?? []).length === 0 && (
-                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
+              <label className="block text-xs font-bold text-slate-700 mb-1">Naam</label>
+              <input
+                type="text"
+                value={nameVal}
+                onChange={e => setNameVal(e.target.value)}
+                onBlur={handleNameBlur}
+                onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
+
+            {/* Materiaal */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Materiaal</label>
+              <p className="text-[10px] text-slate-500 mb-2">
+                Het materiaal dat deze bron invoert in de flow. Volgende stappen erven dit automatisch.
+              </p>
+              {(state.materials ?? []).length === 0 ? (
+                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                   <span>Maak eerst materialen aan op de Materialen-pagina</span>
                 </div>
+              ) : (
+                <select
+                  value={node.outputMaterialId ?? ''}
+                  onChange={e => updateNode(node.id, { outputMaterialId: e.target.value || undefined })}
+                  className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                >
+                  <option value="">— Geen materiaal —</option>
+                  {(state.materials ?? []).map(m => (
+                    <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
+                  ))}
+                </select>
               )}
-              {(node.productMix ?? []).map((entry, idx) => (
-                <div key={entry.id} className="flex items-center gap-1.5 mb-1.5">
-                  <input
-                    type="text"
-                    value={entry.label}
-                    onChange={e => {
-                      const updated = (node.productMix ?? []).map((en, i) =>
-                        i === idx ? { ...en, label: e.target.value } : en
-                      );
-                      setSourceProductMix(node.id, updated);
-                    }}
-                    className="w-20 text-xs border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                    placeholder="Label"
-                  />
-                  <select
-                    value={entry.materialId}
-                    onChange={e => {
-                      const updated = (node.productMix ?? []).map((en, i) =>
-                        i === idx ? { ...en, materialId: e.target.value } : en
-                      );
-                      setSourceProductMix(node.id, updated);
-                    }}
-                    className="flex-1 text-xs border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
-                  >
-                    <option value="">— Materiaal —</option>
-                    {(state.materials ?? []).map(m => (
-                      <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={entry.quantity}
-                    onChange={e => {
-                      const updated = (node.productMix ?? []).map((en, i) =>
-                        i === idx ? { ...en, quantity: Number(e.target.value) } : en
-                      );
-                      setSourceProductMix(node.id, updated);
-                    }}
-                    className="w-16 text-xs border border-slate-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                    placeholder="Qty"
-                  />
-                  <button
-                    onClick={() => {
-                      const updated = (node.productMix ?? []).filter((_, i) => i !== idx);
-                      setSourceProductMix(node.id, updated);
-                    }}
-                    className="p-1 text-slate-400 hover:text-red-500 transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  const newEntry: ProductMixEntry = {
-                    id: Math.random().toString(36).slice(2, 9),
-                    label: `Type ${(node.productMix ?? []).length + 1}`,
-                    materialId: '',
-                    quantity: 0,
-                  };
-                  setSourceProductMix(node.id, [...(node.productMix ?? []), newEntry]);
-                }}
-                className="mt-1 flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-medium"
-              >
-                <Plus className="w-3 h-3" />
-                Type toevoegen
-              </button>
             </div>
+
+            {/* Aanvoermodus */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-2">Aanvoermodus</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateNode(node.id, { supplyMode: 'unlimited', fixedSupplyAmount: undefined })}
+                  className={`flex-1 py-2.5 px-3 rounded-lg border text-xs font-semibold transition-all text-left ${
+                    (node.supplyMode ?? 'unlimited') === 'unlimited'
+                      ? 'bg-emerald-50 border-emerald-400 text-emerald-800 ring-1 ring-emerald-400'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="text-sm font-bold mb-0.5">∞ Onbeperkt</div>
+                  <div className="text-[10px] font-normal opacity-75">Capaciteit bepaald door processtappen</div>
+                </button>
+                <button
+                  onClick={() => updateNode(node.id, { supplyMode: 'fixed', fixedSupplyPeriodUnit: node.fixedSupplyPeriodUnit ?? 'week' })}
+                  className={`flex-1 py-2.5 px-3 rounded-lg border text-xs font-semibold transition-all text-left ${
+                    node.supplyMode === 'fixed'
+                      ? 'bg-amber-50 border-amber-400 text-amber-800 ring-1 ring-amber-400'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="text-sm font-bold mb-0.5">Vaste aanvoer</div>
+                  <div className="text-[10px] font-normal opacity-75">Bron kan limiter worden</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Vaste aanvoer configuratie */}
+            {node.supplyMode === 'fixed' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
+                <label className="block text-xs font-bold text-slate-700">Aanvoerhoeveelheid</label>
+                <div className="flex items-center gap-2">
+                  <NumericInput
+                    min={0.001} step={1}
+                    value={node.fixedSupplyAmount}
+                    onChange={v => updateNode(node.id, { fixedSupplyAmount: v })}
+                    placeholder="bijv. 500"
+                    className="flex-1 text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                  />
+                  <span className="text-xs text-slate-500 whitespace-nowrap">per</span>
+                  <select
+                    value={node.fixedSupplyPeriodUnit ?? 'week'}
+                    onChange={e => updateNode(node.id, { fixedSupplyPeriodUnit: e.target.value as 'hour' | 'day' | 'week' })}
+                    className="text-sm border border-slate-300 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  >
+                    <option value="hour">uur</option>
+                    <option value="day">dag</option>
+                    <option value="week">week</option>
+                  </select>
+                </div>
+                {node.fixedSupplyAmount != null && node.fixedSupplyAmount > 0 && (() => {
+                  const ph: Record<string, number> = { hour: 1, day: 24, week: 168 };
+                  const uph = node.fixedSupplyAmount / (ph[node.fixedSupplyPeriodUnit ?? 'week'] ?? 168);
+                  return (
+                    <p className="text-[10px] text-amber-700">
+                      ≈ {uph.toFixed(2)} eenheden/uur — de bron kan de bottleneck worden als dit lager is dan de processtappen.
+                    </p>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* KPI blok voor fixed-supply bron */}
+            {node.supplyMode === 'fixed' && stepResult && (
+              <div className="border-t border-slate-100 pt-4">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <Zap className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="text-xs font-bold text-slate-600">Aanvoercapaciteit</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Max doorvoer</span>
+                    <span className="font-semibold">{stepResult.effectiveRateUnitsPerHour.toFixed(2)} e/h</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Max over horizon</span>
+                    <span className="font-semibold">{Math.round(stepResult.stepMaxGoodUnitsOverHorizon).toLocaleString()} eenheden</span>
+                  </div>
+                  {stepResult.utilizationAtTarget != null && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500">Bezettingsgraad</span>
+                      <span className={`font-semibold ${stepResult.utilizationAtTarget >= 0.9 ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {(stepResult.utilizationAtTarget * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                  {isBottleneck && (
+                    <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-2.5 py-2 mt-2">
+                      <span className="font-black">⬛</span>
+                      <span className="font-semibold">Aanvoerafknijping — bron beperkt de doorvoer</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Source node footer: delete (only when 2+ sources) + close        */}
+        {/* ---------------------------------------------------------------- */}
+        {node.nodeType === 'start' && (
+          <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-2">
+            <button
+              disabled={(state.nodes ?? []).filter(n => n.nodeType === 'start').length <= 1}
+              onClick={() => { deleteNode(node.id); onClose(); }}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Verwijder bron
+            </button>
+            <button
+              onClick={onClose}
+              className="flex-1 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+            >
+              Klaar
+            </button>
           </div>
         )}
 
@@ -627,23 +790,45 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, isB
                     </div>
                   )}
 
+                  {/* Upstream material — shown when no explicit inputMaterialId is set */}
+                  {upstreamMaterial && !node.inputMaterialId && (
+                    <div className="flex items-center gap-2 text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
+                      <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                      <span>Van upstream: <strong>{upstreamMaterial.name} ({upstreamMaterial.unit})</strong></span>
+                    </div>
+                  )}
+
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Input materiaal</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      Input materiaal
+                      {upstreamMaterial && !node.inputMaterialId && (
+                        <span className="ml-1 normal-case font-normal text-indigo-500">(overneembaar van upstream)</span>
+                      )}
+                    </label>
                     <select
                       value={node.inputMaterialId ?? ''}
                       onChange={e => {
-                        if (e.target.value) {
+                        const val = e.target.value;
+                        if (val) {
                           setNodeMaterialConversion(
                             node.id,
-                            e.target.value,
-                            node.outputMaterialId ?? e.target.value,
+                            val,
+                            node.outputMaterialId ?? val,
+                            node.conversionRatio ?? 1
+                          );
+                        } else {
+                          // Clear inputMaterialId — inherit from upstream
+                          setNodeMaterialConversion(
+                            node.id,
+                            '',
+                            node.outputMaterialId ?? '',
                             node.conversionRatio ?? 1
                           );
                         }
                       }}
                       className="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
                     >
-                      <option value="">— Geen —</option>
+                      <option value="">{upstreamMaterial ? `↑ ${upstreamMaterial.name} (van upstream)` : '— Geen —'}</option>
                       {(state.materials ?? []).map(m => (
                         <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
                       ))}
@@ -844,6 +1029,13 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
 
   const nodes = state.nodes;
   const edges = state.edges;
+
+  // Resolved material flow per node (propagated from start node's outputMaterialId)
+  const resolvedMaterials = useMemo(
+    () => resolveFlowMaterials(nodes, edges),
+    [nodes, edges],
+  );
+  const materialById = (id?: string) => (state.materials ?? []).find(m => m.id === id);
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -1091,8 +1283,8 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
 
             {/* Topology counts */}
             <div className="bg-white rounded-lg shadow-card border border-slate-200 px-3 py-1.5 flex items-center gap-3 pointer-events-auto text-xs text-slate-500">
-              <span className={sourceCount === 1 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}>
-                {sourceCount}× Bron
+              <span className={sourceCount >= 1 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}>
+                {sourceCount}× {sourceCount === 1 ? 'Bron' : 'Bronnen'}
               </span>
               <span className={sinkCount === 1 ? 'text-slate-600' : 'text-red-500 font-semibold'}>
                 {sinkCount}× Sink
@@ -1103,7 +1295,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
                   {orphanCount} zwevend
                 </span>
               )}
-              {orphanCount === 0 && sourceCount === 1 && sinkCount === 1 && (
+              {orphanCount === 0 && sourceCount >= 1 && sinkCount === 1 && (
                 <span className="text-emerald-600 font-semibold flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
                   Geldig
@@ -1201,23 +1393,28 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
           )}
 
           {/* Nodes */}
-          {nodes.map(node => (
-            <NodeComponent
-              key={node.id}
-              node={node}
-              isSelected={selectedNodeId === node.id}
-              isMultiSelected={multiSelectedNodeIds.includes(node.id)}
-              stepResult={stepResultByNodeId.get(node.id)}
-              isBottleneck={bottleneckStepId === node.id}
-              onMouseDown={handleMouseDown}
-              onContextMenu={(e) => {
-                e.preventDefault(); e.stopPropagation();
-                setContextMenu({ visible: true, x: e.clientX, y: e.clientY, type: 'node', targetId: node.id });
-              }}
-              onPortMouseDown={handlePortMouseDown}
-              onMouseUp={handleNodeMouseUp}
-            />
-          ))}
+          {nodes.map(node => {
+            const resolvedOut = resolvedMaterials.get(node.id)?.outputId;
+            const resolvedOutMaterial = materialById(resolvedOut);
+            return (
+              <NodeComponent
+                key={node.id}
+                node={node}
+                isSelected={selectedNodeId === node.id}
+                isMultiSelected={multiSelectedNodeIds.includes(node.id)}
+                stepResult={stepResultByNodeId.get(node.id)}
+                isBottleneck={bottleneckStepId === node.id}
+                resolvedOutputMaterialName={resolvedOutMaterial ? `${resolvedOutMaterial.name} (${resolvedOutMaterial.unit})` : undefined}
+                onMouseDown={handleMouseDown}
+                onContextMenu={(e) => {
+                  e.preventDefault(); e.stopPropagation();
+                  setContextMenu({ visible: true, x: e.clientX, y: e.clientY, type: 'node', targetId: node.id });
+                }}
+                onPortMouseDown={handlePortMouseDown}
+                onMouseUp={handleNodeMouseUp}
+              />
+            );
+          })}
         </div>
       </div>
 

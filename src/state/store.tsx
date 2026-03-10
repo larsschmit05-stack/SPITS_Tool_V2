@@ -1017,6 +1017,10 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
       resourceId: nodePartial.resourceId,
       durationMinutesPerUnit: nodePartial.durationMinutesPerUnit,
       enabled: nodePartial.enabled,
+      outputMaterialId: nodePartial.outputMaterialId,
+      supplyMode: nodePartial.supplyMode,
+      fixedSupplyAmount: nodePartial.fixedSupplyAmount,
+      fixedSupplyPeriodUnit: nodePartial.fixedSupplyPeriodUnit,
       updatedAt: Date.now(),
     };
     dispatch({ type: 'ADD_NODE', payload: newNode });

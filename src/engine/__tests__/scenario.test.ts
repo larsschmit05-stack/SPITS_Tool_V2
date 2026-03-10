@@ -236,3 +236,91 @@ describe('run() - comparison accuracy', () => {
     expect(typeof result.baseline.summary.feasible).toBe('boolean');
   });
 });
+
+// ---------------------------------------------------------------------------
+// conversionRatio: output units must be in final-material (output) units
+// ---------------------------------------------------------------------------
+
+describe('run() - conversionRatio bug regression', () => {
+  it('stepMaxGoodUnitsPerHour accounts for conversionRatio (output units)', () => {
+    // Resource: 8 e/h (input units), conversionRatio 5 → 40 output units/h
+    // Horizon: 7 calendar days, Mon-Fri 8h = 40 effective hours
+    const state: ProjectState = {
+      materials: [],
+      templates: [],
+      resources: [
+        {
+          id: 'res-conv',
+          name: 'Conversion Machine',
+          type: 'continuous',
+          departmentId: 'dept-prod',
+          outputPerHour: 8,
+          parallelUnits: 1,
+          yieldPct: 100,
+          availability: 1.0,
+          dailyStartupMinutes: 0,
+        },
+      ],
+      departments: [
+        {
+          id: 'dept-prod',
+          name: 'Production',
+          color: '#3B82F6',
+          hoursByWeekday: { mon: 8, tue: 8, wed: 8, thu: 8, fri: 8, sat: 0, sun: 0 },
+          availableHoursPerWeek: 40,
+        },
+      ],
+      steps: [],
+      scenarios: [
+        {
+          id: 'scenario-baseline',
+          name: 'Baseline',
+          createdAt: Date.now(),
+          demand: {
+            targetGoodUnits: 100,
+            horizonCalendarDays: 7,
+            startDateISO: '2026-03-02',
+            timezone: 'Europe/Amsterdam',
+          },
+        },
+      ],
+      activeScenarioId: 'scenario-baseline',
+      nodes: [
+        { id: 'node-start', nodeType: 'start', name: 'Start', position: { x: 0, y: 0 } },
+        {
+          id: 'node-conv',
+          nodeType: 'resourceStep',
+          name: 'Conv Step',
+          position: { x: 200, y: 0 },
+          resourceId: 'res-conv',
+          enabled: true,
+          conversionRatio: 5,
+        },
+        { id: 'node-end', nodeType: 'end', name: 'End', position: { x: 400, y: 0 } },
+      ],
+      edges: [
+        { id: 'edge-1', source: 'node-start', target: 'node-conv' },
+        { id: 'edge-2', source: 'node-conv', target: 'node-end' },
+      ],
+      isDirty: false,
+      latestRunResult: null,
+    };
+
+    const result = run(state, {
+      projectId: 'test-project',
+      scenarioId: null,
+      targetGoodUnits: 100,
+      horizonCalendarDays: 7,
+      startDateISO: '2026-03-02',
+      timezone: 'Europe/Amsterdam',
+    });
+
+    const step = result.baseline.steps[0];
+    // 8 e/h × conversionRatio 5 = 40 output units/h
+    expect(step.stepMaxGoodUnitsPerHour).toBeCloseTo(40, 5);
+    // 40 output units/h × 40 effective hours = 1600 output units
+    expect(step.stepMaxGoodUnitsOverHorizon).toBeCloseTo(1600, 5);
+    // utilizationAtTarget = 100 / 1600 = 6.25%
+    expect(step.utilizationAtTarget).toBeCloseTo(0.0625, 5);
+  });
+});

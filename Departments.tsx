@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import type { Department } from './src/state/types';
 import { validateDepartmentDraft, sumHoursByWeekday } from './src/engine/validators';
+import { NumericInput } from './src/components/NumericInput';
 
 // ---------------------------------------------------------------------------
 // Small reusable field components
@@ -396,12 +397,10 @@ export const Departments: React.FC = () => {
                           <label className="text-xs text-slate-600 font-medium block mb-0.5">
                             {dayLabels[day]}
                           </label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="24"
+                          <NumericInput
+                            min={0} max={24} step={0.5}
                             value={draft.hoursByWeekday?.[day] ?? 0}
-                            onChange={e => patchDraftHours(day, Number(e.target.value))}
+                            onChange={v => patchDraftHours(day, v ?? 0)}
                             className={inputCls(errors[`hoursByWeekday.${day}`])}
                           />
                           {errors[`hoursByWeekday.${day}`] && (

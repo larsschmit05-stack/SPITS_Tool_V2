@@ -300,35 +300,17 @@ export function computeStepResults(
   // Pass 2: backward pass — compute cumYieldToEnd (only enabled steps)
   // ---------------------------------------------------------------------------
 
-  // cumYieldToEnd[i] = product of yieldFactor for enabled steps from i to last enabled
+  // cumYieldToEnd[i] = yieldFactor[i] * conversionRatio[i] * acc_before_this_step
+  // where acc = product of (yieldFactor * conversionRatio) for all enabled steps downstream.
+  // This gives the number of final-material good units produced per 1 input unit of step i.
   const cumYieldToEnd: number[] = new Array(intermediates.length).fill(0);
 
-  let runningYield = 1;
-  for (let i = intermediates.length - 1; i >= 0; i--) {
-    const im = intermediates[i];
-    if (!im.enabled) {
-      // Disabled step is transparent — skip in yield chain
-      cumYieldToEnd[i] = runningYield; // will be overwritten below; not used in output
-      continue;
-    }
-    runningYield *= im.yieldFactor;
-    cumYieldToEnd[i] = runningYield;
-  }
-
-  // Normalise: cumYieldToEnd should be relative to the last enabled step's position.
-  // After the backward pass, runningYield = cumulative product of ALL enabled yields.
-  // We need cumYieldToEnd[i] = product from step i to end of enabled chain.
-  // Re-do: iterate from end, accumulate only enabled steps, set their cumYield.
   {
-    // acc represents "how many final-material good units come from 1 output unit of step i+1"
-    // cumYieldToEnd[i] = yieldFactor[i] * acc_before_this_step
-    // acc update: acc = yieldFactor[i] * conversionRatio[i] * acc_before
-    // conversionRatio=1 everywhere → identical results to the old pure-yield pass.
     let acc = 1;
     for (let i = intermediates.length - 1; i >= 0; i--) {
       const im = intermediates[i];
       if (!im.enabled) continue;
-      cumYieldToEnd[i] = im.yieldFactor * acc;
+      cumYieldToEnd[i] = im.yieldFactor * im.conversionRatio * acc;
       acc = im.yieldFactor * im.conversionRatio * acc;
     }
 
@@ -348,7 +330,7 @@ export function computeStepResults(
   // Pass 3: assemble StepResult[]
   // ---------------------------------------------------------------------------
 
-  return intermediates.map((im, i): StepResult => {
+  const processStepResults = intermediates.map((im, i): StepResult => {
     const cY = cumYieldToEnd[i];
     const stepMaxGoodUnitsPerHour = im.effectiveRateUnitsPerHour * cY;
     const stepMaxGoodUnitsOverHorizon = stepMaxGoodUnitsPerHour * im.effectiveHours;
@@ -429,6 +411,57 @@ export function computeStepResults(
 
     return base;
   });
+
+  // ---------------------------------------------------------------------------
+  // Synthetic StepResult entries for fixed-supply source nodes
+  // Prepended so they appear first in the results and can become the bottleneck.
+  // ---------------------------------------------------------------------------
+  const sourceResults: StepResult[] = orderedSteps
+    .filter(s => s.type === 'start' && s.supplyMode === 'fixed' && s.maxUnitsPerHour != null)
+    .map((s, idx) => {
+      if (s.type !== 'start' || s.maxUnitsPerHour == null) return null as unknown as StepResult;
+      const effectiveHours = request.horizonCalendarDays * 24; // calendar hours, supply is always-on
+      const maxUph = s.maxUnitsPerHour;
+      const maxOverHorizon = round4(maxUph * effectiveHours);
+      const utilization = effectiveHours > 0 ? round4(targetGoodUnits / maxOverHorizon) : null;
+      const capacityStatus: CapacityStatus =
+        utilization === null ? 'invalid_input'
+        : utilization >= 1 ? 'warning'
+        : utilization >= 0.9 ? 'warning'
+        : 'ok';
+      return {
+        stepId: s.id,
+        stepIndex: -(orderedSteps.filter(x => x.type === 'start').length - idx),
+        stepType: 'source' as const,
+        label: s.label,
+        enabled: true,
+        isActive: true,
+        isBottleneckCandidate: true,
+        capacityStatus,
+        inheritedDepartmentId: null,
+        inheritedDepartmentName: null,
+        scheduledHours: effectiveHours,
+        startupHoursApplied: 0,
+        availableHoursAfterStartup: effectiveHours,
+        effectiveHours: round4(effectiveHours),
+        effectiveRateUnitsPerHour: round4(maxUph),
+        cumYieldToEnd: 1,
+        stepMaxGoodUnitsPerHour: round4(maxUph),
+        stepMaxGoodUnitsOverHorizon: maxOverHorizon,
+        requiredWorkHoursAtTarget: utilization !== null ? round4(targetGoodUnits / maxUph) : null,
+        utilizationAtTarget: utilization,
+        explain: [
+          `Vaste aanvoer: ${maxUph.toFixed(4)} e/h (${s.label})`,
+          `Kalenderhorizon: ${effectiveHours}h (${request.horizonCalendarDays} dagen × 24h)`,
+          `Max aanvoer over horizon: ${maxOverHorizon} eenheden`,
+          utilization !== null
+            ? `Bezettingsgraad bij doel (${targetGoodUnits} e): ${(utilization * 100).toFixed(1)}%`
+            : 'Ongeldig: effectieve uren = 0',
+        ],
+      } satisfies StepResult;
+    });
+
+  return [...sourceResults, ...processStepResults];
 }
 
 // ---------------------------------------------------------------------------

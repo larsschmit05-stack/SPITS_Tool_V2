@@ -126,7 +126,16 @@ function buildEngineInput(
   // These will be caught by validateFlowGraph and validateStepContent later.
   const steps: EngineFlowStep[] = state.nodes
     .map((node): EngineFlowStep | null => {
-      if (node.nodeType === 'start') return { type: 'start', id: node.id };
+      if (node.nodeType === 'start') {
+        const supplyMode = node.supplyMode ?? 'unlimited';
+        let maxUnitsPerHour: number | undefined;
+        if (supplyMode === 'fixed' && node.fixedSupplyAmount != null && node.fixedSupplyAmount > 0) {
+          const periodHours: Record<string, number> = { hour: 1, day: 24, week: 168 };
+          const ph = periodHours[node.fixedSupplyPeriodUnit ?? 'week'] ?? 168;
+          maxUnitsPerHour = node.fixedSupplyAmount / ph;
+        }
+        return { type: 'start', id: node.id, label: node.name, supplyMode, maxUnitsPerHour };
+      }
       if (node.nodeType === 'end') return { type: 'end', id: node.id };
       if (node.nodeType === 'resourceStep' && node.resourceId) {
         return {

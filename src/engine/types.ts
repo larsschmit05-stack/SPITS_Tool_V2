@@ -129,7 +129,15 @@ export interface EngineDepartment {
 // ---------------------------------------------------------------------------
 
 export type EngineFlowStep =
-  | { type: 'start'; id: string }
+  | {
+      type: 'start';
+      id: string;
+      label: string;
+      /** 'unlimited' = no supply constraint; 'fixed' = limited to maxUnitsPerHour */
+      supplyMode: 'unlimited' | 'fixed';
+      /** Pre-computed hourly rate for fixed-supply sources. undefined when unlimited. */
+      maxUnitsPerHour?: number;
+    }
   | { type: 'end'; id: string }
   | {
       type: 'resourceStep';
@@ -281,7 +289,7 @@ export type CapacityStatus =
 export interface StepResult {
   stepId: string;
   stepIndex: number;
-  stepType: 'resourceStep' | 'timeStep';
+  stepType: 'resourceStep' | 'timeStep' | 'source';
   label: string;
   enabled: boolean;
 
@@ -349,7 +357,7 @@ export interface StepResult {
 export interface BottleneckResult {
   stepId: string | null;
   resourceId: string | null;
-  type: 'resourceStep' | 'timeStep' | null;
+  type: 'resourceStep' | 'timeStep' | 'source' | null;
   metric: 'utilizationAtTarget' | null;
   utilizationAtTarget: number | null;
   stepMaxGoodUnitsPerHour: number | null;

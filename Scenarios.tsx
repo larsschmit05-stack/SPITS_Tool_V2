@@ -16,6 +16,7 @@ import {
   resolvedDeptHours,
 } from './src/scenarios/helpers';
 import { run } from './src/engine/engine';
+import { NumericInput } from './src/components/NumericInput';
 
 // ---------------------------------------------------------------------------
 // Shared primitives
@@ -765,17 +766,10 @@ const StepCapacityTab: React.FC<{
             <div className="flex items-center gap-3 mt-3">
               <div className="flex items-center gap-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">Parallel Units</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="999"
-                  step="1"
+                <NumericInput
+                  min={1} max={999} step={1} integer
                   value={currentParallel}
-                  onChange={(e) => {
-                    const v = parseInt(e.target.value);
-                    if (!Number.isFinite(v) || v < 1) return;
-                    onSetOverride(resource.id, { parallelUnits: v });
-                  }}
+                  onChange={v => { if (v !== undefined) onSetOverride(resource.id, { parallelUnits: v }); }}
                   className={`w-20 text-center border rounded-md px-2 py-1.5 text-sm ${
                     isOverridden ? 'border-brand-400 bg-brand-50 font-semibold' : 'border-slate-200 bg-slate-50'
                   } focus:ring-1 focus:ring-brand-500 outline-none`}

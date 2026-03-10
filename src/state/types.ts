@@ -364,7 +364,7 @@ export interface FlowNode {
   id: string;
   /**
    * Node role in the flow — single source of truth for node behaviour.
-   * - start: exactly 1 per flow; material entry point
+   * - start: 1 or more per flow; material entry point
    * - end: exactly 1 per flow; process exit
    * - resourceStep: linked to a resource via resourceId; capacity-bearing
    * - timeStep: pure delay, no capacity, uses durationMinutesPerUnit
@@ -384,18 +384,31 @@ export interface FlowNode {
   updatedAt?: number;
 
   // --- Material system ---
-  /** start node only: which materials/types flow from this source */
-  productMix?: ProductMixEntry[];
+  /** start node only: material that flows out of this source into the flow */
+  outputMaterialId?: string;
   /** resourceStep / timeStep: which material enters this step */
   inputMaterialId?: string;
-  /** resourceStep / timeStep: which material exits this step */
-  outputMaterialId?: string;
   /**
    * Output units produced per input unit consumed at this step.
    * E.g. 57.14 sachets per jar. Defaults to 1 (no conversion).
    * Only meaningful when inputMaterialId ≠ outputMaterialId.
    */
   conversionRatio?: number;
+
+  // --- Source supply configuration (start node only) ---
+  /**
+   * 'unlimited' (default): source imposes no constraint — capacity is determined by process steps.
+   * 'fixed': source can supply at most fixedSupplyAmount units per fixedSupplyPeriodUnit.
+   */
+  supplyMode?: 'unlimited' | 'fixed';
+  /** Amount of units available per period (when supplyMode = 'fixed'). */
+  fixedSupplyAmount?: number;
+  /** Period unit for fixedSupplyAmount: 'hour', 'day', or 'week'. Default 'week'. */
+  fixedSupplyPeriodUnit?: 'hour' | 'day' | 'week';
+
+  // --- Deprecated (kept for backward-compat with serialised state) ---
+  /** @deprecated use outputMaterialId on the start node instead */
+  productMix?: ProductMixEntry[];
 }
 
 export interface FlowEdge {

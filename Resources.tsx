@@ -8,6 +8,7 @@ import {
 import type { Resource, ResourceClass, ProcessingMode, TransportMode, DelayMode } from './src/state/types';
 import { computeCapacityPreview, type CapacityPreview } from './src/utils/capacityCalculation';
 import { ProcessElementCreationFlow } from './ProcessElementCreationFlow';
+import { NumericInput } from './src/components/NumericInput';
 
 // ---------------------------------------------------------------------------
 // Type labels (Canonical Naming Contract)
@@ -633,10 +634,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                   (draft.processingMode === 'continuous' || draft.processingMode == null) && (
                   <Field label="Output per uur" required error={errors.outputPerHour}>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number" min={0} step={1}
-                        value={draft.outputPerHour ?? ''}
-                        onChange={e => patchDraft('outputPerHour', e.target.value === '' ? undefined : Number(e.target.value))}
+                      <NumericInput
+                        min={0} step={1}
+                        value={draft.outputPerHour}
+                        onChange={v => patchDraft('outputPerHour', v)}
                         placeholder="bijv. 50"
                         className={`${inputCls(errors.outputPerHour)} flex-1`}
                       />
@@ -655,10 +656,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     tooltip="Tijd per eenheid in minuten. Engine berekent: output/uur = 60 / cyclustijd"
                   >
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number" min={0.1} step={0.1}
-                        value={draft.cycleTimeMinutes ?? (draft.outputPerHour ? Math.round(6000 / draft.outputPerHour) / 100 : '')}
-                        onChange={e => setCycleTimeForManual(e.target.value === '' ? undefined : Number(e.target.value))}
+                      <NumericInput
+                        min={0.1} step={0.1}
+                        value={draft.cycleTimeMinutes ?? (draft.outputPerHour ? Math.round(6000 / draft.outputPerHour) / 100 : undefined)}
+                        onChange={v => setCycleTimeForManual(v)}
                         placeholder="bijv. 6"
                         className={`${inputCls(errors.outputPerHour)} flex-1`}
                       />
@@ -674,10 +675,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <Field label="Batchgrootte" required error={errors.batchSize}>
                         <div className="flex items-center gap-2">
-                          <input
-                            type="number" min={1} step={1}
-                            value={draft.batchSize ?? ''}
-                            onChange={e => patchDraft('batchSize', e.target.value === '' ? undefined : Number(e.target.value))}
+                          <NumericInput
+                            min={1} step={1} integer
+                            value={draft.batchSize}
+                            onChange={v => patchDraft('batchSize', v)}
                             placeholder="bijv. 100"
                             className={`${inputCls(errors.batchSize)} flex-1`}
                           />
@@ -691,10 +692,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         tooltip="Omvat alle thermische en verwerkingstijd"
                       >
                         <div className="flex items-center gap-2">
-                          <input
-                            type="number" min={0.1} step={1}
-                            value={draft.cycleTimeMinutes ?? ''}
-                            onChange={e => patchDraft('cycleTimeMinutes', e.target.value === '' ? undefined : Number(e.target.value))}
+                          <NumericInput
+                            min={0.1} step={1}
+                            value={draft.cycleTimeMinutes}
+                            onChange={v => patchDraft('cycleTimeMinutes', v)}
                             placeholder="bijv. 30"
                             className={`${inputCls(errors.cycleTimeMinutes)} flex-1`}
                           />
@@ -707,10 +708,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                       tooltip="Opstel- of instelwerk per batch (laden, uitlijnen, etc.)"
                     >
                       <div className="flex items-center gap-2">
-                        <input
-                          type="number" min={0} step={1}
-                          value={draft.batchSetupMinutes ?? ''}
-                          onChange={e => patchDraft('batchSetupMinutes', e.target.value === '' ? undefined : Number(e.target.value))}
+                        <NumericInput
+                          min={0} step={1}
+                          value={draft.batchSetupMinutes}
+                          onChange={v => patchDraft('batchSetupMinutes', v)}
                           placeholder="bijv. 5"
                           className={`${inputCls()} flex-1`}
                         />
@@ -730,10 +731,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                       tooltip="Aantal eenheden per rit"
                     >
                       <div className="flex items-center gap-2">
-                        <input
-                          type="number" min={1} step={1}
-                          value={draft.unitsPerTrip ?? ''}
-                          onChange={e => patchDraft('unitsPerTrip', e.target.value === '' ? undefined : Number(e.target.value))}
+                        <NumericInput
+                          min={1} step={1}
+                          value={draft.unitsPerTrip}
+                          onChange={v => patchDraft('unitsPerTrip', v)}
                           placeholder="bijv. 200"
                           className={`${inputCls(errors.unitsPerTrip)} flex-1`}
                         />
@@ -747,10 +748,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                       tooltip="Totale reistijd heen en terug inclusief laad- en loswerk"
                     >
                       <div className="flex items-center gap-2">
-                        <input
-                          type="number" min={1} step={1}
-                          value={draft.tripDurationMinutes ?? ''}
-                          onChange={e => patchDraft('tripDurationMinutes', e.target.value === '' ? undefined : Number(e.target.value))}
+                        <NumericInput
+                          min={1} step={1}
+                          value={draft.tripDurationMinutes}
+                          onChange={v => patchDraft('tripDurationMinutes', v)}
                           placeholder="bijv. 8"
                           className={`${inputCls(errors.tripDurationMinutes)} flex-1`}
                         />
@@ -764,10 +765,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 {draft.resourceClass === 'transport' && draft.transportMode === 'continuous' && (
                   <Field label="Doorvoer" required error={errors.outputPerHour}>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number" min={0} step={1}
-                        value={draft.outputPerHour ?? ''}
-                        onChange={e => patchDraft('outputPerHour', e.target.value === '' ? undefined : Number(e.target.value))}
+                      <NumericInput
+                        min={0} step={1}
+                        value={draft.outputPerHour}
+                        onChange={v => patchDraft('outputPerHour', v)}
                         placeholder="bijv. 300"
                         className={`${inputCls(errors.outputPerHour)} flex-1`}
                       />
@@ -786,10 +787,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         error={errors.slotCapacity}
                         tooltip="Maximum aantal eenheden dat in deze buffer kan opgeslagen"
                       >
-                        <input
-                          type="number" min={1} step={1}
-                          value={draft.slotCapacity ?? ''}
-                          onChange={e => patchDraft('slotCapacity', e.target.value === '' ? undefined : Number(e.target.value))}
+                        <NumericInput
+                          min={1} step={1} integer
+                          value={draft.slotCapacity}
+                          onChange={v => patchDraft('slotCapacity', v)}
                           placeholder="bijv. 500"
                           className={inputCls(errors.slotCapacity)}
                         />
@@ -812,10 +813,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         tooltip="Gemiddelde tijd dat product in de buffer verblijft"
                       >
                         <div className="flex items-center gap-2">
-                          <input
-                            type="number" min={1} step={1}
-                            value={draft.dwellTimeMinutes ?? ''}
-                            onChange={e => patchDraft('dwellTimeMinutes', e.target.value === '' ? undefined : Number(e.target.value))}
+                          <NumericInput
+                            min={1} step={1}
+                            value={draft.dwellTimeMinutes}
+                            onChange={v => patchDraft('dwellTimeMinutes', v)}
                             placeholder="bijv. 120"
                             className={`${inputCls(errors.dwellTimeMinutes)} flex-1`}
                           />
@@ -824,10 +825,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                       </Field>
                       <Field label="Veiligheidsreserve">
                         <div className="flex items-center gap-2">
-                          <input
-                            type="number" min={0} max={50} step={1}
+                          <NumericInput
+                            min={0} max={50} step={1}
                             value={draft.safetyMarginPct ?? 0}
-                            onChange={e => patchDraft('safetyMarginPct', Math.min(50, Math.max(0, Number(e.target.value))))}
+                            onChange={v => patchDraft('safetyMarginPct', v ?? 0)}
                             className={`${inputCls()} flex-1`}
                           />
                           <span className="text-xs text-slate-500">%</span>
@@ -836,10 +837,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     </div>
                     <Field label="Max. wachttijd (optioneel)">
                       <div className="flex items-center gap-2">
-                        <input
-                          type="number" min={1} step={1}
-                          value={draft.maxHoldMinutes ?? ''}
-                          onChange={e => patchDraft('maxHoldMinutes', e.target.value === '' ? undefined : Number(e.target.value))}
+                        <NumericInput
+                          min={1} step={1}
+                          value={draft.maxHoldMinutes}
+                          onChange={v => patchDraft('maxHoldMinutes', v)}
                           placeholder="Geen limiet"
                           className={`${inputCls()} flex-1`}
                         />
@@ -858,10 +859,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <Field label="Wachttijd" required error={errors.delayTimeMinutes} tooltip="Technische wachttijd per eenheid (bijv. koelen, drogen, uitharden)">
                         <div className="flex items-center gap-2">
-                          <input
-                            type="number" min={0.1} step={1}
-                            value={draft.delayTimeMinutes ?? ''}
-                            onChange={e => patchDraft('delayTimeMinutes', e.target.value === '' ? undefined : Number(e.target.value))}
+                          <NumericInput
+                            min={0.1} step={1}
+                            value={draft.delayTimeMinutes}
+                            onChange={v => patchDraft('delayTimeMinutes', v)}
                             placeholder="bijv. 120"
                             className={`${inputCls(errors.delayTimeMinutes)} flex-1`}
                           />
@@ -894,10 +895,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     tooltip="Hoeveel machines, medewerkers of middelen tegelijk deze stap uitvoeren"
                   >
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number" min={1} step={1}
+                      <NumericInput
+                        min={1} step={1} integer
                         value={draft.parallelUnits ?? 1}
-                        onChange={e => patchDraft('parallelUnits', Math.max(1, Math.round(Number(e.target.value))))}
+                        onChange={v => patchDraft('parallelUnits', v ?? 1)}
                         className={`${inputCls()} flex-1`}
                       />
                       <span className="text-xs text-slate-500">stuks</span>
@@ -917,10 +918,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                       tooltip="Effectieve inzetbaarheid van de tijd (bijv. 0.90 = 90% beschikbaar door storingen en onderhoud)"
                     >
                       <div className="flex items-center gap-2">
-                        <input
-                          type="number" min={0.01} max={1} step={0.01}
+                        <NumericInput
+                          min={0.01} max={1} step={0.01}
                           value={draft.availability ?? 1}
-                          onChange={e => patchDraft('availability', Math.min(1, Math.max(0.01, Number(e.target.value))))}
+                          onChange={v => patchDraft('availability', v ?? 1)}
                           className={`${inputCls()} flex-1`}
                         />
                         <span className="text-xs text-slate-500">0–1</span>
@@ -934,10 +935,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         tooltip="Percentage output zonder uitval of herstelwerk (100% = geen uitval)"
                       >
                         <div className="flex items-center gap-2">
-                          <input
-                            type="number" min={0.1} max={100} step={1}
+                          <NumericInput
+                            min={0.1} max={100} step={1}
                             value={draft.yieldPct ?? 100}
-                            onChange={e => patchDraft('yieldPct', Math.min(100, Math.max(0.1, Number(e.target.value))))}
+                            onChange={v => patchDraft('yieldPct', v ?? 100)}
                             className={`${inputCls()} flex-1`}
                           />
                           <span className="text-xs text-slate-500">%</span>
@@ -952,10 +953,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         tooltip="Dagelijks tijdverlies door opstart of voorbereiding (bijv. opwarmen, instellen)"
                       >
                         <div className="flex items-center gap-2">
-                          <input
-                            type="number" min={0} step={1}
+                          <NumericInput
+                            min={0} step={1}
                             value={draft.dailyStartupMinutes ?? 0}
-                            onChange={e => patchDraft('dailyStartupMinutes', Math.max(0, Number(e.target.value)))}
+                            onChange={v => patchDraft('dailyStartupMinutes', v ?? 0)}
                             className={`${inputCls()} flex-1`}
                           />
                           <span className="text-xs text-slate-500">min/dag</span>

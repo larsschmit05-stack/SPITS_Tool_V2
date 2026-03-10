@@ -167,11 +167,11 @@ export function validateFlowGraph(
   const starts = steps.filter(s => s.type === 'start');
   const ends = steps.filter(s => s.type === 'end');
 
-  if (starts.length !== 1) {
+  if (starts.length < 1) {
     issues.push(
       error(
         'ERR_FLOW_INVALID_START',
-        `Flow must have exactly 1 start node, found ${starts.length}`,
+        `Flow must have at least 1 start node, found ${starts.length}`,
         'flow'
       )
     );
