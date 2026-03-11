@@ -472,13 +472,13 @@ const Step5_CapacityPreview: React.FC<{
           <div className="flex justify-between">
             <span className="text-slate-600">Theoretical rate:</span>
             <span className="font-mono text-slate-900">
-              {preview.theoreticalRate === null ? '—' : preview.theoreticalRate.toFixed(1)} /uur
+              {preview.theoreticalRate === null ? '—' : preview.theoreticalRate.toFixed(1)} /hour
             </span>
           </div>
           <div className="flex justify-between">
             <span className="text-slate-600">Effective rate:</span>
             <span className="font-mono text-slate-900">
-              {preview.effectiveRate === null ? '—' : preview.effectiveRate.toFixed(1)} /uur
+              {preview.effectiveRate === null ? '—' : preview.effectiveRate.toFixed(1)} /hour
             </span>
           </div>
         </div>

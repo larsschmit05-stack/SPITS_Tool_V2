@@ -789,22 +789,22 @@ export function validateDepartmentDraft(
 
   // Name validation
   if (!draft.name || String(draft.name).trim() === '') {
-    errors.name = 'Naam is verplicht';
+    errors.name = 'Name is required';
   } else if (String(draft.name).trim().length < 2) {
-    errors.name = 'Naam moet minstens 2 tekens zijn';
+    errors.name = 'Name must be at least 2 characters';
   } else {
     const duplicate = existingDepartments.find(
       d => String(d.id) !== String(draft.id) &&
            String(d.name ?? '').toLowerCase() === String(draft.name ?? '').toLowerCase()
     );
     if (duplicate) {
-      errors.name = 'Een afdeling met deze naam bestaat al';
+      errors.name = 'A department with this name already exists';
     }
   }
 
   // Color validation
   if (!draft.color || String(draft.color).trim() === '') {
-    errors.color = 'Kleur is verplicht';
+    errors.color = 'Color is required';
   }
 
   // Daily hours validation (each day must be >= 0)
@@ -815,11 +815,11 @@ export function validateDepartmentDraft(
     for (const day of days) {
       const hours = hoursByWeekday[day];
       if (hours === undefined || hours === null) {
-        errors[`hoursByWeekday.${day}`] = 'Uren zijn verplicht';
+        errors[`hoursByWeekday.${day}`] = 'Hours are required';
       } else if (Number(hours) < 0) {
-        errors[`hoursByWeekday.${day}`] = 'Uren kunnen niet negatief zijn';
+        errors[`hoursByWeekday.${day}`] = 'Hours cannot be negative';
       } else if (!Number.isFinite(Number(hours))) {
-        errors[`hoursByWeekday.${day}`] = 'Uren moeten een getal zijn';
+        errors[`hoursByWeekday.${day}`] = 'Hours must be a number';
       }
     }
   }
@@ -828,9 +828,9 @@ export function validateDepartmentDraft(
   const weeklyTotal = hoursByWeekday ? sumHoursByWeekday(hoursByWeekday) : 0;
 
   if (weeklyTotal <= 0) {
-    errors.hoursByWeekday = 'Totaal uren per week moet groter dan 0 zijn';
+    errors.hoursByWeekday = 'Total weekly hours must be greater than 0';
   } else if (weeklyTotal > 168) {
-    errors.hoursByWeekday = 'Totaal uren per week kan niet meer dan 168 zijn (24 × 7)';
+    errors.hoursByWeekday = 'Total weekly hours cannot exceed 168 (24 × 7)';
   }
 
   return errors;
@@ -857,15 +857,15 @@ export function validateResourceForCreation(
 
   // Name validation
   if (!draft.name || String(draft.name).trim() === '') {
-    errors.name = 'Naam is verplicht';
+    errors.name = 'Name is required';
   } else if (String(draft.name).trim().length < 2) {
-    errors.name = 'Naam moet minstens 2 tekens zijn';
+    errors.name = 'Name must be at least 2 characters';
   }
 
   // Department required for everything except delay
   if (cls !== 'delay') {
     if (!draft.departmentId || !deptIds.includes(String(draft.departmentId))) {
-      errors.departmentId = 'Selecteer een afdeling';
+      errors.departmentId = 'Select a department';
     }
   }
 
@@ -875,26 +875,26 @@ export function validateResourceForCreation(
     if (mode === 'continuous' || mode === 'manual') {
       if (!draft.outputPerHour || Number(draft.outputPerHour) <= 0) {
         errors.outputPerHour = mode === 'manual'
-          ? 'Cyclustijd is vereist en moet groter dan 0 zijn'
-          : 'Vereist en moet groter dan 0 zijn';
+          ? 'Cycle time is required and must be greater than 0'
+          : 'Required and must be greater than 0';
       }
     }
     if (mode === 'batch') {
       if (!draft.batchSize || Number(draft.batchSize) <= 0) {
-        errors.batchSize = 'Vereist en moet groter dan 0 zijn';
+        errors.batchSize = 'Required and must be greater than 0';
       }
       if (!draft.cycleTimeMinutes || Number(draft.cycleTimeMinutes) < 0.1) {
-        errors.cycleTimeMinutes = 'Vereist en moet ≥ 0.1 min zijn';
+        errors.cycleTimeMinutes = 'Required and must be ≥ 0.1 min';
       }
     }
   }
 
   if (cls === 'buffer') {
     if (!draft.slotCapacity || Number(draft.slotCapacity) <= 0) {
-      errors.slotCapacity = 'Buffergrootte is vereist en moet groter dan 0 zijn';
+      errors.slotCapacity = 'Buffer size is required and must be greater than 0';
     }
     if (!draft.dwellTimeMinutes || Number(draft.dwellTimeMinutes) < 1) {
-      errors.dwellTimeMinutes = 'Verblijftijd is vereist (min. 1 minuut)';
+      errors.dwellTimeMinutes = 'Dwell time is required (min. 1 minute)';
     }
   }
 
@@ -902,21 +902,21 @@ export function validateResourceForCreation(
     const tmode = (draft.transportMode as string) ?? 'discrete';
     if (tmode === 'discrete') {
       if (!draft.unitsPerTrip || Number(draft.unitsPerTrip) <= 0) {
-        errors.unitsPerTrip = 'Laadvermogen is vereist en moet groter dan 0 zijn';
+        errors.unitsPerTrip = 'Load per trip is required and must be greater than 0';
       }
       if (!draft.tripDurationMinutes || Number(draft.tripDurationMinutes) < 1) {
-        errors.tripDurationMinutes = 'Rondrittijd is vereist (min. 1 minuut)';
+        errors.tripDurationMinutes = 'Round-trip time is required (min. 1 minute)';
       }
     } else {
       if (!draft.outputPerHour || Number(draft.outputPerHour) <= 0) {
-        errors.outputPerHour = 'Vereist en moet groter dan 0 zijn';
+        errors.outputPerHour = 'Required and must be greater than 0';
       }
     }
   }
 
   if (cls === 'delay') {
     if (!draft.delayTimeMinutes || Number(draft.delayTimeMinutes) < 0.1) {
-      errors.delayTimeMinutes = 'Wachttijd is vereist (min. 0.1 minuut)';
+      errors.delayTimeMinutes = 'Wait time is required (min. 0.1 minute)';
     }
   }
 

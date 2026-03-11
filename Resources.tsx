@@ -23,22 +23,22 @@ export function getResourceClassLabel(
   if (cls === 'processing') {
     if (processingMode === 'batch') return 'Batch';
     if (processingMode === 'manual') return 'Manual / Labor';
-    return 'Continu / Machine';
+    return 'Continuous / Machine';
   }
   if (cls === 'buffer') return 'Buffer';
   if (cls === 'transport') {
-    return transportMode === 'continuous' ? 'Continu Transport' : 'Rit-gebaseerd Transport';
+    return transportMode === 'continuous' ? 'Continuous Transport' : 'Trip-based Transport';
   }
   if (cls === 'delay') return 'Technical Delay';
   return 'Processing';
 }
 
 const CLASS_FILTER_LABELS: Record<string, string> = {
-  All: 'Alles',
+  All: 'All',
   processing: 'Processing',
   buffer: 'Buffer',
   transport: 'Transport',
-  delay: 'Vertraging',
+  delay: 'Delay',
 };
 
 // ---------------------------------------------------------------------------
@@ -453,7 +453,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         {dept && <span className="text-[9px] text-slate-400">{dept.name}</span>}
                         {cls === 'delay' && (
                           <span className="text-[9px] font-bold text-violet-600 uppercase bg-violet-50 px-1 py-0.5 rounded">
-                            Vertraging
+                            Delay
                           </span>
                         )}
                         {res.isTemplate && (
@@ -551,7 +551,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                   </div>
                 )}
 
-                {/* ---- Naam ---- */}
+                {/* ---- Name ---- */}
                 <Field label="Name">
                   <input
                     type="text"
@@ -579,7 +579,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                           onChange={e => patchDraft('processingMode', e.target.value as ProcessingMode)}
                           className={`${inputCls()} appearance-none pr-8`}
                         >
-                          <option value="continuous">Continu / Machine</option>
+                          <option value="continuous">Continuous / Machine</option>
                           <option value="manual">Manual / Labor</option>
                           <option value="batch">Batch</option>
                         </select>
@@ -590,15 +590,15 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
 
                   {/* Sub-type selector — transport mode */}
                   {draft.resourceClass === 'transport' && (
-                    <Field label="Transportmodus">
+                    <Field label="Transport mode">
                       <div className="relative">
                         <select
                           value={draft.transportMode ?? 'discrete'}
                           onChange={e => patchDraft('transportMode', e.target.value as TransportMode)}
                           className={`${inputCls()} appearance-none pr-8`}
                         >
-                          <option value="discrete">Rit-gebaseerd Transport</option>
-                          <option value="continuous">Continu Transport</option>
+                          <option value="discrete">Trip-based Transport</option>
+                          <option value="continuous">Continuous Transport</option>
                         </select>
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                       </div>
@@ -606,7 +606,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                   )}
                 </div>
 
-                {/* ---- Afdeling (not for delay) ---- */}
+                {/* ---- Department (not for delay) ---- */}
                 {draft.resourceClass !== 'delay' && (
                   <Field label="Department" required error={errors.departmentId}>
                     <div className="relative">
@@ -629,10 +629,10 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 {/* TYPE-SPECIFIC FIELDS                                              */}
                 {/* ---------------------------------------------------------------- */}
 
-                {/* Processing: Continu / Machine */}
+                {/* Processing: Continuous / Machine */}
                 {(draft.resourceClass === 'processing' || draft.resourceClass == null) &&
                   (draft.processingMode === 'continuous' || draft.processingMode == null) && (
-                  <Field label="Output per uur" required error={errors.outputPerHour}>
+                  <Field label="Output per hour" required error={errors.outputPerHour}>
                     <div className="flex items-center gap-2">
                       <NumericInput
                         min={0} step={1}
@@ -663,7 +663,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         placeholder="e.g. 6"
                         className={`${inputCls(errors.outputPerHour)} flex-1`}
                       />
-                      <span className="text-xs text-slate-500 whitespace-nowrap">min/eenheid</span>
+                      <span className="text-xs text-slate-500 whitespace-nowrap">min/unit</span>
                     </div>
                   </Field>
                 )}
@@ -699,13 +699,13 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                             placeholder="e.g. 30"
                             className={`${inputCls(errors.cycleTimeMinutes)} flex-1`}
                           />
-                          <span className="text-xs text-slate-500">minuten</span>
+                          <span className="text-xs text-slate-500">minutes</span>
                         </div>
                       </Field>
                     </div>
                     <Field
-                      label="Voorbereidingstijd per batch"
-                      tooltip="Opstel- of instelwerk per batch (laden, uitlijnen, etc.)"
+                      label="Setup time per batch"
+                      tooltip="Setup work per batch (loading, alignment, etc.)"
                     >
                       <div className="flex items-center gap-2">
                         <NumericInput
@@ -715,17 +715,17 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                           placeholder="e.g. 5"
                           className={`${inputCls()} flex-1`}
                         />
-                        <span className="text-xs text-slate-500">minuten</span>
+                        <span className="text-xs text-slate-500">minutes</span>
                       </div>
                     </Field>
                   </>
                 )}
 
-                {/* Transport: Rit-gebaseerd */}
+                {/* Transport: Trip-based */}
                 {draft.resourceClass === 'transport' && (draft.transportMode === 'discrete' || draft.transportMode == null) && (
                   <div className="grid grid-cols-2 gap-4">
                     <Field
-                      label="Lading per rit"
+                      label="Load per trip"
                       required
                       error={errors.unitsPerTrip}
                       tooltip="Units per trip"
@@ -755,7 +755,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                           placeholder="e.g. 8"
                           className={`${inputCls(errors.tripDurationMinutes)} flex-1`}
                         />
-                        <span className="text-xs text-slate-500">minuten</span>
+                        <span className="text-xs text-slate-500">minutes</span>
                       </div>
                     </Field>
                   </div>
@@ -800,7 +800,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                           type="text"
                           value={draft.slotUnit ?? ''}
                           onChange={e => patchDraft('slotUnit', e.target.value || undefined)}
-                          placeholder="kg / stuks / liter"
+                          placeholder="kg / units / liters"
                           className={inputCls()}
                         />
                       </Field>
@@ -869,14 +869,14 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                           <span className="text-xs text-slate-500">min</span>
                         </div>
                       </Field>
-                      <Field label="Vertragingsmodus">
+                      <Field label="Delay mode">
                         <div className="relative">
                           <select
                             value={draft.delayMode ?? 'per_unit'}
                             onChange={e => patchDraft('delayMode', e.target.value as DelayMode)}
                             className={`${inputCls()} appearance-none pr-8`}
                           >
-                            <option value="per_unit">Per eenheid</option>
+                            <option value="per_unit">Per unit</option>
                             <option value="per_batch">Per batch</option>
                           </select>
                           <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
@@ -891,7 +891,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 {/* ---------------------------------------------------------------- */}
                 {draft.resourceClass !== 'buffer' && draft.resourceClass !== 'delay' && (
                   <Field
-                    label="Aantal gelijktijdig actief"
+                    label="Parallel units active"
                     tooltip="How many machines, workers, or resources perform this step in parallel"
                   >
                     <div className="flex items-center gap-2">
@@ -901,20 +901,20 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         onChange={v => patchDraft('parallelUnits', v ?? 1)}
                         className={`${inputCls()} flex-1`}
                       />
-                      <span className="text-xs text-slate-500">stuks</span>
+                      <span className="text-xs text-slate-500">units</span>
                     </div>
                   </Field>
                 )}
 
                 {/* ---------------------------------------------------------------- */}
-                {/* PRESTATIEFACTOREN (not for delay)                                */}
+                {/* PERFORMANCE FACTORS (not for delay)                                */}
                 {/* ---------------------------------------------------------------- */}
                 {draft.resourceClass !== 'delay' && (
                   <div className="border border-slate-100 rounded-lg p-4 space-y-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Prestatiefactoren</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Performance factors</p>
 
                     <Field
-                      label="Beschikbaarheid"
+                      label="Availability"
                       tooltip="Effective usable time (e.g. 0.90 = 90% available due to downtime and maintenance)"
                     >
                       <div className="flex items-center gap-2">
@@ -1015,7 +1015,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     rows={2}
                     value={draft.description ?? ''}
                     onChange={e => patchDraft('description', e.target.value || undefined)}
-                    placeholder="Korte toelichting..."
+                    placeholder="Short description..."
                     className={`${inputCls()} resize-none`}
                   />
                 </Field>
@@ -1045,7 +1045,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Tag toevoegen..."
+                        placeholder="Add tag..."
                         value={newTag}
                         onChange={e => setNewTag(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleAddTag()}
@@ -1056,15 +1056,15 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         disabled={!newTag.trim()}
                         className="px-3 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        Voeg toe
+                        Add
                       </button>
                     </div>
                   </div>
                 </Field>
 
-                {/* ---- Library acties ---- */}
+                {/* ---- Library actions ---- */}
                 <div className="border-t border-slate-100 pt-5 space-y-3">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Library acties</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Library actions</p>
                   <button
                     onClick={handleToggleTemplate}
                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
