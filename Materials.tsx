@@ -38,8 +38,8 @@ const inputCls = (error?: string) =>
 
 function validateDraft(draft: Partial<Material>): Record<string, string> {
   const errs: Record<string, string> = {};
-  if (!draft.name?.trim()) errs.name = 'Naam is verplicht';
-  if (!draft.unit?.trim()) errs.unit = 'Eenheid is verplicht';
+  if (!draft.name?.trim()) errs.name = 'Name is required';
+  if (!draft.unit?.trim()) errs.unit = 'Unit is required';
   return errs;
 }
 
@@ -88,7 +88,7 @@ export const Materials: React.FC = () => {
   };
 
   const handleAddMaterial = () => {
-    const newDraft: Partial<Material> = { name: 'Nieuw Materiaal', unit: 'st' };
+    const newDraft: Partial<Material> = { name: 'New Material', unit: 'st' };
     setDraft(newDraft);
     setSelectedId('__new__');
     setIsDirty(true);
@@ -115,10 +115,10 @@ export const Materials: React.FC = () => {
     }
     if (selectedId === '__new__') {
       addMaterial({ name: draft.name!.trim(), unit: draft.unit!.trim(), description: draft.description });
-      showToast('Materiaal toegevoegd');
+      showToast('Material added');
     } else if (selectedId) {
       updateMaterial({ ...(draft as Material), name: draft.name!.trim(), unit: draft.unit!.trim() });
-      showToast('Materiaal bijgewerkt');
+      showToast('Material updated');
     }
     setSelectedId(null);
     setDraft(null);
@@ -138,11 +138,11 @@ export const Materials: React.FC = () => {
     if (!selectedId || selectedId === '__new__') return;
     const inUse = usageCount(selectedId);
     if (inUse > 0) {
-      setErrors({ _delete: `Kan niet verwijderen: materiaal is in gebruik in ${inUse} stap${inUse !== 1 ? 'pen' : ''}` });
+      setErrors({ _delete: `Cannot delete: material is used in ${inUse} step${inUse !== 1 ? 's' : ''}` });
       return;
     }
     deleteMaterial(selectedId);
-    showToast('Materiaal verwijderd');
+    showToast('Material deleted');
     setSelectedId(null);
     setDraft(null);
     setErrors({});
@@ -162,11 +162,11 @@ export const Materials: React.FC = () => {
         <div className="p-4 border-b border-slate-200 bg-slate-50/50">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest">
-              Materialen
+              Materials
             </h3>
             <button
               onClick={handleAddMaterial}
-              title="Nieuw materiaal"
+              title="New material"
               className="p-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-md transition-all"
             >
               <Plus className="w-4 h-4" />
@@ -177,7 +177,7 @@ export const Materials: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Zoeken..."
+              placeholder="Search..."
               className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -215,7 +215,7 @@ export const Materials: React.FC = () => {
             ))
           ) : (
             <div className="p-6 text-center text-slate-400 text-xs">
-              {materials.length === 0 ? 'Nog geen materialen aangemaakt' : 'Geen materialen gevonden'}
+              {materials.length === 0 ? 'No materials created yet' : 'No materials found'}
             </div>
           )}
         </div>
@@ -232,7 +232,7 @@ export const Materials: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-slate-800">
-                    {draft.name || 'Nieuw Materiaal'}
+                    {draft.name || 'New Material'}
                   </div>
                   <div className="text-xs text-slate-500">{draft.unit || '—'}</div>
                 </div>
@@ -242,7 +242,7 @@ export const Materials: React.FC = () => {
                   onClick={handleDiscard}
                   className="px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-md transition-all"
                 >
-                  Annuleren
+                  Cancel
                 </button>
                 <button
                   onClick={handleSave}
@@ -253,7 +253,7 @@ export const Materials: React.FC = () => {
                       : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                   }`}
                 >
-                  Opslaan
+                  Save
                 </button>
               </div>
             </div>
@@ -268,47 +268,47 @@ export const Materials: React.FC = () => {
             <div className="flex-1 overflow-y-auto px-6 py-4">
               <div className="space-y-4">
 
-                <Field label="Naam" required error={errors.name}>
+                <Field label="Name" required error={errors.name}>
                   <input
                     type="text"
                     value={draft.name ?? ''}
                     onChange={e => patchDraft('name', e.target.value)}
                     className={inputCls(errors.name)}
-                    placeholder="Bijv. Medicijndoos, Pot, Sachet..."
+                    placeholder="e.g. Medicine box, Jar, Sachet..."
                   />
                 </Field>
 
-                <Field label="Eenheid" required error={errors.unit}>
+                <Field label="Unit" required error={errors.unit}>
                   <input
                     type="text"
                     value={draft.unit ?? ''}
                     onChange={e => patchDraft('unit', e.target.value)}
                     className={inputCls(errors.unit)}
-                    placeholder="Bijv. doos, pot, sachet, kg..."
+                    placeholder="e.g. box, jar, sachet, kg..."
                   />
                 </Field>
 
-                <Field label="Omschrijving" error={errors.description}>
+                <Field label="Description" error={errors.description}>
                   <textarea
                     value={draft.description ?? ''}
                     onChange={e => patchDraft('description', e.target.value)}
                     className={`${inputCls()} resize-none`}
                     rows={3}
-                    placeholder="Optionele toelichting..."
+                    placeholder="Optional notes..."
                   />
                 </Field>
 
                 {selectedId !== '__new__' && (
                   <div className="pt-4 border-t border-slate-200">
                     <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
-                      Gebruik
+                      Usage
                     </div>
                     {usageCount(selectedId!) > 0 ? (
                       <div className="text-xs text-slate-600 bg-slate-50 p-2 rounded-md">
-                        {usageCount(selectedId!)} stap{usageCount(selectedId!) !== 1 ? 'pen' : ''} verwijzen naar dit materiaal
+                        {usageCount(selectedId!)} step${usageCount(selectedId!) !== 1 ? 's' : ''} reference this material
                       </div>
                     ) : (
-                      <div className="text-xs text-slate-400">Niet in gebruik in de flow</div>
+                      <div className="text-xs text-slate-400">Not used in the flow</div>
                     )}
                   </div>
                 )}
@@ -321,20 +321,20 @@ export const Materials: React.FC = () => {
                 {showDeleteConfirm ? (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                     <p className="text-xs text-red-700 font-semibold mb-2">
-                      Weet je zeker? Dit kan niet ongedaan worden.
+                      Are you sure? This cannot be undone.
                     </p>
                     <div className="flex gap-2">
                       <button
                         onClick={handleDelete}
                         className="flex-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-md transition-all"
                       >
-                        Verwijderen
+                        Delete
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(false)}
                         className="flex-1 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-semibold rounded-md hover:bg-slate-50 transition-all"
                       >
-                        Annuleren
+                        Cancel
                       </button>
                     </div>
                   </div>
@@ -352,7 +352,7 @@ export const Materials: React.FC = () => {
                     }`}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Verwijderen
+                    Delete
                   </button>
                 )}
               </div>
@@ -360,7 +360,7 @@ export const Materials: React.FC = () => {
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
-            Selecteer een materiaal of maak er een nieuw aan
+            Select a material or create a new one
           </div>
         )}
       </div>

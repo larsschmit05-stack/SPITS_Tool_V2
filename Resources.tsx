@@ -22,20 +22,20 @@ export function getResourceClassLabel(
   const cls = resourceClass ?? 'processing';
   if (cls === 'processing') {
     if (processingMode === 'batch') return 'Batch';
-    if (processingMode === 'manual') return 'Handmatig / Arbeid';
+    if (processingMode === 'manual') return 'Manual / Labor';
     return 'Continu / Machine';
   }
   if (cls === 'buffer') return 'Buffer';
   if (cls === 'transport') {
     return transportMode === 'continuous' ? 'Continu Transport' : 'Rit-gebaseerd Transport';
   }
-  if (cls === 'delay') return 'Technische Vertraging';
-  return 'Verwerking';
+  if (cls === 'delay') return 'Technical Delay';
+  return 'Processing';
 }
 
 const CLASS_FILTER_LABELS: Record<string, string> = {
   All: 'Alles',
-  processing: 'Verwerking',
+  processing: 'Processing',
   buffer: 'Buffer',
   transport: 'Transport',
   delay: 'Vertraging',
@@ -52,7 +52,7 @@ function validateDraft(draft: Partial<Resource>, deptIds: string[]): Record<stri
   // Department required for everything except delay
   if (cls !== 'delay') {
     if (!draft.departmentId || !deptIds.includes(draft.departmentId)) {
-      errors.departmentId = 'Selecteer een afdeling';
+      errors.departmentId = 'Select a department';
     }
   }
 
@@ -61,34 +61,34 @@ function validateDraft(draft: Partial<Resource>, deptIds: string[]): Record<stri
     if (mode === 'continuous' || mode === 'manual') {
       if (!draft.outputPerHour || draft.outputPerHour <= 0) {
         errors.outputPerHour = mode === 'manual'
-          ? 'Cyclustijd is vereist en moet groter dan 0 zijn'
-          : 'Vereist en moet groter dan 0 zijn';
+          ? 'Cycle time is required and must be greater than 0'
+          : 'Required and must be greater than 0';
       }
     }
     if (mode === 'batch') {
-      if (!draft.batchSize || draft.batchSize <= 0) errors.batchSize = 'Vereist en moet groter dan 0 zijn';
-      if (!draft.cycleTimeMinutes || draft.cycleTimeMinutes < 0.1) errors.cycleTimeMinutes = 'Vereist en moet ≥ 0.1 min zijn';
+      if (!draft.batchSize || draft.batchSize <= 0) errors.batchSize = 'Required and must be greater than 0';
+      if (!draft.cycleTimeMinutes || draft.cycleTimeMinutes < 0.1) errors.cycleTimeMinutes = 'Required and must be ≥ 0.1 min';
     }
   }
 
   if (cls === 'buffer') {
-    if (!draft.slotCapacity || draft.slotCapacity <= 0) errors.slotCapacity = 'Maximale capaciteit is vereist en moet groter dan 0 zijn';
-    if (!draft.dwellTimeMinutes || draft.dwellTimeMinutes < 1) errors.dwellTimeMinutes = 'Verblijftijd is vereist (min. 1 minuut)';
+    if (!draft.slotCapacity || draft.slotCapacity <= 0) errors.slotCapacity = 'Maximum capacity is required and must be greater than 0';
+    if (!draft.dwellTimeMinutes || draft.dwellTimeMinutes < 1) errors.dwellTimeMinutes = 'Dwell time is required (min. 1 minute)';
   }
 
   if (cls === 'transport') {
     const tmode = draft.transportMode ?? 'discrete';
     if (tmode === 'discrete') {
-      if (!draft.unitsPerTrip || draft.unitsPerTrip <= 0) errors.unitsPerTrip = 'Lading per rit is vereist en moet groter dan 0 zijn';
-      if (!draft.tripDurationMinutes || draft.tripDurationMinutes < 1) errors.tripDurationMinutes = 'Rondrittijd is vereist (min. 1 minuut)';
+      if (!draft.unitsPerTrip || draft.unitsPerTrip <= 0) errors.unitsPerTrip = 'Load per trip is required and must be greater than 0';
+      if (!draft.tripDurationMinutes || draft.tripDurationMinutes < 1) errors.tripDurationMinutes = 'Round-trip time is required (min. 1 minute)';
     } else {
-      if (!draft.outputPerHour || draft.outputPerHour <= 0) errors.outputPerHour = 'Vereist en moet groter dan 0 zijn';
+      if (!draft.outputPerHour || draft.outputPerHour <= 0) errors.outputPerHour = 'Required and must be greater than 0';
     }
   }
 
   if (cls === 'delay') {
     if (!draft.delayTimeMinutes || draft.delayTimeMinutes < 0.1) {
-      errors.delayTimeMinutes = 'Wachttijd is vereist (min. 0.1 minuut)';
+      errors.delayTimeMinutes = 'Wait time is required (min. 0.1 minute)';
     }
   }
 
@@ -261,8 +261,8 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
     // Change-impact toast
     const usage = selectResourceUsage(draft.id, state.nodes, state.edges, state.scenarios, state.latestRunResult);
     if (usage && usage.usageCount > 0) {
-      const bottleneckNote = usage.wasBottleneckIn.length > 0 ? ' — dit element was een knelpunt.' : '';
-      showToast(`Opgeslagen. Gebruikt in ${usage.usageCount} stap(pen) — herbereken om resultaten bij te werken.${bottleneckNote}`);
+      const bottleneckNote = usage.wasBottleneckIn.length > 0 ? ' — this element was a bottleneck.' : '';
+      showToast(`Saved. Used in ${usage.usageCount} step(s) — recalculate to update results.${bottleneckNote}`);
     } else {
       showToast('Opgeslagen');
     }
@@ -279,7 +279,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
   const handleCreateResource = (resource: Omit<Resource, 'id'>) => {
     const newId = addResource(resource);
     setSelectedId(newId);
-    showToast(`'${resource.name}' aangemaakt`);
+    showToast(`'${resource.name}' created`);
   };
 
   // -------------------------------------------------------------------------
@@ -311,17 +311,17 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
     if (draft.isTemplate) {
       unmarkTemplate(draft.id);
       setDraft({ ...draft, isTemplate: false });
-      showToast('Uit library verwijderd');
+      showToast('Removed from library');
     } else {
       markAsTemplate(draft.id);
       setDraft({ ...draft, isTemplate: true });
-      showToast('Opgeslagen als template');
+      showToast('Saved as template');
     }
   };
 
   const handleInstantiate = () => {
     if (!selectedResource) return;
-    setInstName(`${selectedResource.name} (kopie)`);
+    setInstName(`${selectedResource.name} (copy)`);
     setShowInstDialog(true);
   };
 
@@ -331,7 +331,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
     setShowInstDialog(false);
     setInstName('');
     setSelectedId(newId);
-    showToast(`'${instName.trim()}' aangemaakt`);
+    showToast(`'${instName.trim()}' created`);
   };
 
   // -------------------------------------------------------------------------
@@ -374,7 +374,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
             </h3>
             <button
               onClick={() => setShowCreationFlow(true)}
-              title="Nieuw element"
+              title="New element"
               className="p-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-md transition-all"
             >
               <Plus className="w-4 h-4" />
@@ -386,7 +386,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Naam of tag..."
+              placeholder="Name or tag..."
               className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -418,7 +418,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 onChange={e => setDeptFilter(e.target.value)}
                 className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-md text-xs appearance-none focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
-                <option value="All">Alle afdelingen</option>
+                <option value="All">All departments</option>
                 {state.departments.map(d => (
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
@@ -485,7 +485,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
               );
             })
           ) : (
-            <div className="p-6 text-center text-slate-400 text-xs">Geen elementen gevonden</div>
+            <div className="p-6 text-center text-slate-400 text-xs">No elements found</div>
           )}
         </div>
       </div>
@@ -505,7 +505,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     {getResourceClassLabel(draft.resourceClass, draft.processingMode, draft.transportMode)}
-                    {draft.isTemplate ? ' · Library Template' : draft.templateSourceId ? ' · Template kopie' : ''}
+                    {draft.isTemplate ? ' · Library Template' : draft.templateSourceId ? ' · Template copy' : ''}
                   </p>
                   <h3 className="text-base font-bold text-slate-900 leading-tight">{draft.name}</h3>
                 </div>
@@ -518,7 +518,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     onClick={handleDiscard}
                     className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-all"
                   >
-                    Annuleer
+                    Cancel
                   </button>
                 )}
                 <button
@@ -530,7 +530,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                       : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                   }`}
                 >
-                  Opslaan
+                  Save
                 </button>
               </div>
             </div>
@@ -542,7 +542,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 {/* Validation summary */}
                 {hasErrors && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-xs font-bold text-red-700 mb-1">Los de volgende fouten op om op te slaan:</p>
+                    <p className="text-xs font-bold text-red-700 mb-1">Fix the following errors to save:</p>
                     <ul className="list-disc list-inside space-y-0.5">
                       {Object.values(errors).map((e, i) => (
                         <li key={i} className="text-xs text-red-600">{e}</li>
@@ -552,7 +552,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 )}
 
                 {/* ---- Naam ---- */}
-                <Field label="Naam">
+                <Field label="Name">
                   <input
                     type="text"
                     value={draft.name}
@@ -572,7 +572,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
 
                   {/* Sub-type selector — processing sub-mode */}
                   {(draft.resourceClass === 'processing' || draft.resourceClass == null) && (
-                    <Field label="Verwerkingsmodus">
+                    <Field label="Processing mode">
                       <div className="relative">
                         <select
                           value={draft.processingMode ?? 'continuous'}
@@ -580,7 +580,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                           className={`${inputCls()} appearance-none pr-8`}
                         >
                           <option value="continuous">Continu / Machine</option>
-                          <option value="manual">Handmatig / Arbeid</option>
+                          <option value="manual">Manual / Labor</option>
                           <option value="batch">Batch</option>
                         </select>
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
@@ -608,14 +608,14 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
 
                 {/* ---- Afdeling (not for delay) ---- */}
                 {draft.resourceClass !== 'delay' && (
-                  <Field label="Afdeling" required error={errors.departmentId}>
+                  <Field label="Department" required error={errors.departmentId}>
                     <div className="relative">
                       <select
                         value={draft.departmentId ?? ''}
                         onChange={e => patchDraft('departmentId', e.target.value)}
                         className={`${inputCls(errors.departmentId)} appearance-none pr-8`}
                       >
-                        <option value="">-- Selecteer afdeling --</option>
+                        <option value="">-- Select department --</option>
                         {state.departments.map(d => (
                           <option key={d.id} value={d.id}>{d.name}</option>
                         ))}
@@ -638,29 +638,29 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         min={0} step={1}
                         value={draft.outputPerHour}
                         onChange={v => patchDraft('outputPerHour', v)}
-                        placeholder="bijv. 50"
+                        placeholder="e.g. 50"
                         className={`${inputCls(errors.outputPerHour)} flex-1`}
                       />
-                      <span className="text-xs text-slate-500 whitespace-nowrap">eenheden/uur</span>
+                      <span className="text-xs text-slate-500 whitespace-nowrap">units/hour</span>
                     </div>
                   </Field>
                 )}
 
-                {/* Processing: Handmatig / Arbeid */}
+                {/* Processing: Manual / Labor */}
                 {(draft.resourceClass === 'processing' || draft.resourceClass == null) &&
                   draft.processingMode === 'manual' && (
                   <Field
-                    label="Cyclustijd"
+                    label="Cycle time"
                     required
                     error={errors.outputPerHour}
-                    tooltip="Tijd per eenheid in minuten. Engine berekent: output/uur = 60 / cyclustijd"
+                    tooltip="Time per unit in minutes. Engine calculates: output/hour = 60 / cycle time"
                   >
                     <div className="flex items-center gap-2">
                       <NumericInput
                         min={0.1} step={0.1}
                         value={draft.cycleTimeMinutes ?? (draft.outputPerHour ? Math.round(6000 / draft.outputPerHour) / 100 : undefined)}
                         onChange={v => setCycleTimeForManual(v)}
-                        placeholder="bijv. 6"
+                        placeholder="e.g. 6"
                         className={`${inputCls(errors.outputPerHour)} flex-1`}
                       />
                       <span className="text-xs text-slate-500 whitespace-nowrap">min/eenheid</span>
@@ -673,30 +673,30 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                   draft.processingMode === 'batch' && (
                   <>
                     <div className="grid grid-cols-2 gap-4">
-                      <Field label="Batchgrootte" required error={errors.batchSize}>
+                      <Field label="Batch size" required error={errors.batchSize}>
                         <div className="flex items-center gap-2">
                           <NumericInput
                             min={1} step={1} integer
                             value={draft.batchSize}
                             onChange={v => patchDraft('batchSize', v)}
-                            placeholder="bijv. 100"
+                            placeholder="e.g. 100"
                             className={`${inputCls(errors.batchSize)} flex-1`}
                           />
-                          <span className="text-xs text-slate-500">eenheden</span>
+                          <span className="text-xs text-slate-500">units</span>
                         </div>
                       </Field>
                       <Field
-                        label="Batch cyclustijd"
+                        label="Batch cycle time"
                         required
                         error={errors.cycleTimeMinutes}
-                        tooltip="Omvat alle thermische en verwerkingstijd"
+                        tooltip="Includes all thermal and processing time"
                       >
                         <div className="flex items-center gap-2">
                           <NumericInput
                             min={0.1} step={1}
                             value={draft.cycleTimeMinutes}
                             onChange={v => patchDraft('cycleTimeMinutes', v)}
-                            placeholder="bijv. 30"
+                            placeholder="e.g. 30"
                             className={`${inputCls(errors.cycleTimeMinutes)} flex-1`}
                           />
                           <span className="text-xs text-slate-500">minuten</span>
@@ -712,7 +712,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                           min={0} step={1}
                           value={draft.batchSetupMinutes}
                           onChange={v => patchDraft('batchSetupMinutes', v)}
-                          placeholder="bijv. 5"
+                          placeholder="e.g. 5"
                           className={`${inputCls()} flex-1`}
                         />
                         <span className="text-xs text-slate-500">minuten</span>
@@ -728,31 +728,31 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                       label="Lading per rit"
                       required
                       error={errors.unitsPerTrip}
-                      tooltip="Aantal eenheden per rit"
+                      tooltip="Units per trip"
                     >
                       <div className="flex items-center gap-2">
                         <NumericInput
                           min={1} step={1}
                           value={draft.unitsPerTrip}
                           onChange={v => patchDraft('unitsPerTrip', v)}
-                          placeholder="bijv. 200"
+                          placeholder="e.g. 200"
                           className={`${inputCls(errors.unitsPerTrip)} flex-1`}
                         />
-                        <span className="text-xs text-slate-500">eenheden</span>
+                        <span className="text-xs text-slate-500">units</span>
                       </div>
                     </Field>
                     <Field
                       label="Rondrittijd"
                       required
                       error={errors.tripDurationMinutes}
-                      tooltip="Totale reistijd heen en terug inclusief laad- en loswerk"
+                      tooltip="Total round-trip time including loading and unloading"
                     >
                       <div className="flex items-center gap-2">
                         <NumericInput
                           min={1} step={1}
                           value={draft.tripDurationMinutes}
                           onChange={v => patchDraft('tripDurationMinutes', v)}
-                          placeholder="bijv. 8"
+                          placeholder="e.g. 8"
                           className={`${inputCls(errors.tripDurationMinutes)} flex-1`}
                         />
                         <span className="text-xs text-slate-500">minuten</span>
@@ -763,16 +763,16 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
 
                 {/* Transport: Continu */}
                 {draft.resourceClass === 'transport' && draft.transportMode === 'continuous' && (
-                  <Field label="Doorvoer" required error={errors.outputPerHour}>
+                  <Field label="Throughput" required error={errors.outputPerHour}>
                     <div className="flex items-center gap-2">
                       <NumericInput
                         min={0} step={1}
                         value={draft.outputPerHour}
                         onChange={v => patchDraft('outputPerHour', v)}
-                        placeholder="bijv. 300"
+                        placeholder="e.g. 300"
                         className={`${inputCls(errors.outputPerHour)} flex-1`}
                       />
-                      <span className="text-xs text-slate-500 whitespace-nowrap">eenheden/uur</span>
+                      <span className="text-xs text-slate-500 whitespace-nowrap">units/hour</span>
                     </div>
                   </Field>
                 )}
@@ -782,20 +782,20 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <Field
-                        label="Maximale capaciteit"
+                        label="Maximum capacity"
                         required
                         error={errors.slotCapacity}
-                        tooltip="Maximum aantal eenheden dat in deze buffer kan opgeslagen"
+                        tooltip="Maximum units that can be stored in this buffer"
                       >
                         <NumericInput
                           min={1} step={1} integer
                           value={draft.slotCapacity}
                           onChange={v => patchDraft('slotCapacity', v)}
-                          placeholder="bijv. 500"
+                          placeholder="e.g. 500"
                           className={inputCls(errors.slotCapacity)}
                         />
                       </Field>
-                      <Field label="Eenheid">
+                      <Field label="Unit">
                         <input
                           type="text"
                           value={draft.slotUnit ?? ''}
@@ -810,14 +810,14 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         label="Verblijftijd"
                         required
                         error={errors.dwellTimeMinutes}
-                        tooltip="Gemiddelde tijd dat product in de buffer verblijft"
+                        tooltip="Average time product stays in the buffer"
                       >
                         <div className="flex items-center gap-2">
                           <NumericInput
                             min={1} step={1}
                             value={draft.dwellTimeMinutes}
                             onChange={v => patchDraft('dwellTimeMinutes', v)}
-                            placeholder="bijv. 120"
+                            placeholder="e.g. 120"
                             className={`${inputCls(errors.dwellTimeMinutes)} flex-1`}
                           />
                           <span className="text-xs text-slate-500">min</span>
@@ -835,13 +835,13 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                         </div>
                       </Field>
                     </div>
-                    <Field label="Max. wachttijd (optioneel)">
+                    <Field label="Max wait time (optional)">
                       <div className="flex items-center gap-2">
                         <NumericInput
                           min={1} step={1}
                           value={draft.maxHoldMinutes}
                           onChange={v => patchDraft('maxHoldMinutes', v)}
-                          placeholder="Geen limiet"
+                          placeholder="No limit"
                           className={`${inputCls()} flex-1`}
                         />
                         <span className="text-xs text-slate-500">min</span>
@@ -854,16 +854,16 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 {draft.resourceClass === 'delay' && (
                   <>
                     <div className="bg-violet-50 border border-violet-200 rounded-lg px-4 py-2.5 text-xs text-violet-700">
-                      Technische Vertraging heeft geen afdeling — het beperkt de doorvoersnelheid maar verbruikt geen capaciteit.
+                      Technical Delay has no department — it limits throughput but does not consume capacity.
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <Field label="Wachttijd" required error={errors.delayTimeMinutes} tooltip="Technische wachttijd per eenheid (bijv. koelen, drogen, uitharden)">
+                      <Field label="Wait time" required error={errors.delayTimeMinutes} tooltip="Technical wait time per unit (e.g., cooling, drying, curing)">
                         <div className="flex items-center gap-2">
                           <NumericInput
                             min={0.1} step={1}
                             value={draft.delayTimeMinutes}
                             onChange={v => patchDraft('delayTimeMinutes', v)}
-                            placeholder="bijv. 120"
+                            placeholder="e.g. 120"
                             className={`${inputCls(errors.delayTimeMinutes)} flex-1`}
                           />
                           <span className="text-xs text-slate-500">min</span>
@@ -892,7 +892,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 {draft.resourceClass !== 'buffer' && draft.resourceClass !== 'delay' && (
                   <Field
                     label="Aantal gelijktijdig actief"
-                    tooltip="Hoeveel machines, medewerkers of middelen tegelijk deze stap uitvoeren"
+                    tooltip="How many machines, workers, or resources perform this step in parallel"
                   >
                     <div className="flex items-center gap-2">
                       <NumericInput
@@ -915,7 +915,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
 
                     <Field
                       label="Beschikbaarheid"
-                      tooltip="Effectieve inzetbaarheid van de tijd (bijv. 0.90 = 90% beschikbaar door storingen en onderhoud)"
+                      tooltip="Effective usable time (e.g. 0.90 = 90% available due to downtime and maintenance)"
                     >
                       <div className="flex items-center gap-2">
                         <NumericInput
@@ -932,7 +932,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     {(draft.resourceClass === 'processing' || draft.resourceClass == null) && (
                       <Field
                         label="Uitval / First Pass Yield"
-                        tooltip="Percentage output zonder uitval of herstelwerk (100% = geen uitval)"
+                        tooltip="Output percentage without scrap or rework (100% = no scrap)"
                       >
                         <div className="flex items-center gap-2">
                           <NumericInput
@@ -949,8 +949,8 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     {/* Startup — processing only */}
                     {(draft.resourceClass === 'processing' || draft.resourceClass == null) && (
                       <Field
-                        label="Dagelijkse opstarttijd"
-                        tooltip="Dagelijks tijdverlies door opstart of voorbereiding (bijv. opwarmen, instellen)"
+                        label="Daily startup time"
+                        tooltip="Daily time loss due to startup or setup (e.g. warm-up, calibration)"
                       >
                         <div className="flex items-center gap-2">
                           <NumericInput
@@ -959,7 +959,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                             onChange={v => patchDraft('dailyStartupMinutes', v ?? 0)}
                             className={`${inputCls()} flex-1`}
                           />
-                          <span className="text-xs text-slate-500">min/dag</span>
+                          <span className="text-xs text-slate-500">min/day</span>
                         </div>
                       </Field>
                     )}
@@ -971,25 +971,25 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 {/* ---------------------------------------------------------------- */}
                 {preview && (
                   <div className="border border-slate-100 rounded-lg p-4">
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Capaciteitspreview</p>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Capacity preview</p>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-slate-50 rounded-md p-3">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Theoretische doorvoer</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Theoretical throughput</p>
                         <p className="text-lg font-bold text-slate-700">
                           {preview.theoreticalRate !== null
                             ? `${preview.theoreticalRate.toFixed(1)}`
                             : '—'}
                         </p>
-                        <p className="text-[10px] text-slate-400">eenheden/uur</p>
+                        <p className="text-[10px] text-slate-400">units/hour</p>
                       </div>
                       <div className="bg-brand-50 rounded-md p-3">
-                        <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Effectieve doorvoer</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Effective throughput</p>
                         <p className="text-lg font-bold text-brand-700">
                           {preview.effectiveRate !== null
                             ? `${preview.effectiveRate.toFixed(1)}`
                             : '—'}
                         </p>
-                        <p className="text-[10px] text-slate-400">eenheden/uur</p>
+                        <p className="text-[10px] text-slate-400">units/hour</p>
                       </div>
                     </div>
                     {/* Warnings */}
@@ -1003,14 +1003,14 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     {draft.resourceClass !== 'delay' && !draft.departmentId && (
                       <div className="mt-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
                         <Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                        <p className="text-xs text-amber-700">Geen afdeling geselecteerd — voeg een afdeling toe voor een nauwkeurige berekening</p>
+                        <p className="text-xs text-amber-700">No department selected — add a department for an accurate calculation</p>
                       </div>
                     )}
                   </div>
                 )}
 
                 {/* ---- Description ---- */}
-                <Field label="Omschrijving (optioneel)">
+                <Field label="Description (optional)">
                   <textarea
                     rows={2}
                     value={draft.description ?? ''}
@@ -1074,7 +1074,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     }`}
                   >
                     <BookmarkCheck className={`w-4 h-4 ${draft.isTemplate ? 'text-amber-600' : 'text-slate-400'}`} />
-                    {draft.isTemplate ? 'Uit library verwijderen' : 'Opslaan als template'}
+                    {draft.isTemplate ? 'Remove from library' : 'Save as template'}
                   </button>
                   {draft.isTemplate && (
                     <button
@@ -1082,13 +1082,13 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                       className="w-full flex items-center gap-3 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all"
                     >
                       <Copy className="w-4 h-4 text-slate-400" />
-                      Maak kopie van template
+                      Create copy from template
                     </button>
                   )}
                   {draft.templateSourceId && (
                     <div className="bg-sky-50 border border-sky-100 rounded-lg px-4 py-2.5">
                       <p className="text-xs text-sky-700">
-                        Aangemaakt op basis van template{' '}
+                        Created from template{' '}
                         <span className="font-semibold">
                           {state.resources.find(r => r.id === draft.templateSourceId)?.name ?? draft.templateSourceId}
                         </span>
@@ -1101,14 +1101,14 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 <div className="border-t border-slate-100 pt-4">
                   <button
                     onClick={() => {
-                      if (window.confirm(`Element "${draft.name}" definitief verwijderen?`)) {
+                      if (window.confirm(`Element "${draft.name}" permanently delete?`)) {
                         deleteResource(draft.id);
                         setSelectedId(null);
                       }
                     }}
                     className="w-full px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-md font-medium text-sm hover:bg-red-100 transition-all flex items-center justify-center gap-2"
                   >
-                    <Trash2 className="w-4 h-4" /> Element verwijderen
+                    <Trash2 className="w-4 h-4" /> Delete element
                   </button>
                 </div>
 
@@ -1120,15 +1120,15 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
           <div className="flex-1 flex items-center justify-center text-center p-12">
             <div>
               <Database className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-              <h3 className="text-base font-bold text-slate-900 mb-2">Geen element geselecteerd</h3>
+              <h3 className="text-base font-bold text-slate-900 mb-2">No element selected</h3>
               <p className="text-sm text-slate-500 max-w-xs mb-5">
-                Selecteer een element uit de lijst of maak een nieuw aan.
+                Select an element from the list or create a new one.
               </p>
               <button
                 onClick={() => setShowCreationFlow(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-md text-sm font-medium transition-all"
               >
-                <Plus className="w-4 h-4" /> Nieuw element
+                <Plus className="w-4 h-4" /> New element
               </button>
             </div>
           </div>
@@ -1152,8 +1152,8 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
       {showInstDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
-            <h3 className="text-base font-bold text-slate-900 mb-1">Kopie aanmaken</h3>
-            <p className="text-xs text-slate-500 mb-4">Geef het nieuwe element een naam. Alle instellingen worden gekopieerd.</p>
+            <h3 className="text-base font-bold text-slate-900 mb-1">Create copy</h3>
+            <p className="text-xs text-slate-500 mb-4">Enter a name for the new element. All settings will be copied.</p>
             <input
               type="text"
               value={instName}
@@ -1167,14 +1167,14 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                 onClick={() => setShowInstDialog(false)}
                 className="px-3 py-1.5 text-sm text-slate-600 bg-white border border-slate-200 rounded-md hover:bg-slate-50 transition-all"
               >
-                Annuleer
+                Cancel
               </button>
               <button
                 onClick={confirmInstantiate}
                 disabled={!instName.trim()}
                 className="px-4 py-1.5 text-sm font-bold bg-brand-600 hover:bg-brand-700 text-white rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Aanmaken
+                Create
               </button>
             </div>
           </div>
