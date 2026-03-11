@@ -360,10 +360,6 @@ interface NodeComponentProps {
   stepResult?: StepResult;
   flowLoadPct?: number | null;
   isBottleneck?: boolean;
-  /** Resolved output material name (from flow propagation). */
-  resolvedOutputMaterialName?: string;
-  /** Resolved single upstream input material name when unambiguous. */
-  resolvedInputMaterialName?: string;
   onMouseDown: (e: React.MouseEvent, id: string) => void;
   onContextMenu: (e: React.MouseEvent, id: string) => void;
   onPortMouseDown: (e: React.MouseEvent, id: string, type: 'source' | 'target') => void;
@@ -372,7 +368,6 @@ interface NodeComponentProps {
 
 const NodeComponent: React.FC<NodeComponentProps> = ({
   node, isSelected, isMultiSelected, stepResult, flowLoadPct = null, isBottleneck = false,
-  resolvedOutputMaterialName, resolvedInputMaterialName,
   onMouseDown, onContextMenu, onPortMouseDown, onMouseUp
 }) => {
   const colors = nodeTypeColor(node.nodeType, isBottleneck);
@@ -411,14 +406,6 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     return '—';
   })();
 
-  const flowMaterialLine = (() => {
-    if (node.nodeType === 'end') return null;
-    if (resolvedInputMaterialName && resolvedOutputMaterialName && resolvedInputMaterialName !== resolvedOutputMaterialName) {
-      return `${resolvedInputMaterialName} → ${resolvedOutputMaterialName}`;
-    }
-    return resolvedOutputMaterialName ?? resolvedInputMaterialName ?? '—';
-  })();
-
   const throughputLine = (() => {
     if (node.nodeType === 'end') return null;
     const inflow = stepResult?.inflowUnitsPerHour;
@@ -452,7 +439,6 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         {node.nodeType !== 'end' && (
           <>
             <div className="text-[10px] text-slate-600 truncate">{secondaryLine}</div>
-            <div className="text-[10px] text-slate-500 truncate" title={flowMaterialLine ?? ''}>{flowMaterialLine}</div>
             <div className={`text-[10px] truncate ${flowLoadPct !== null && flowLoadPct > 90 ? 'text-red-500' : 'text-slate-400'}`}>
               {throughputLine}
             </div>
@@ -1486,10 +1472,6 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
 
           {/* Nodes */}
           {nodes.map(node => {
-            const resolvedNodeMaterial = resolvedMaterials.get(node.id);
-            const resolvedOutMaterial = materialById(resolvedNodeMaterial?.outputId);
-            const singleInputId = resolvedNodeMaterial?.inputIds.length === 1 ? resolvedNodeMaterial.inputIds[0] : undefined;
-            const resolvedInputMaterial = materialById(singleInputId);
             return (
               <NodeComponent
                 key={node.id}
@@ -1499,8 +1481,6 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
                 stepResult={stepResultByNodeId.get(node.id)}
                 flowLoadPct={flowKpiByNodeId.get(node.id)?.utilizationPct ?? null}
                 isBottleneck={bottleneckStepId === node.id}
-                resolvedOutputMaterialName={resolvedOutMaterial ? `${resolvedOutMaterial.name} (${resolvedOutMaterial.unit})` : undefined}
-                resolvedInputMaterialName={resolvedInputMaterial ? `${resolvedInputMaterial.name} (${resolvedInputMaterial.unit})` : undefined}
                 onMouseDown={handleMouseDown}
                 onContextMenu={(e) => {
                   e.preventDefault(); e.stopPropagation();
