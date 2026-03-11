@@ -931,7 +931,7 @@ export const Resources: React.FC<ResourcesProps> = ({ onNavigate }) => {
                     {/* Yield — processing only */}
                     {(draft.resourceClass === 'processing' || draft.resourceClass == null) && (
                       <Field
-                        label="Uitval / First Pass Yield"
+                        label="First Pass Yield"
                         tooltip="Output percentage without scrap or rework (100% = no scrap)"
                       >
                         <div className="flex items-center gap-2">

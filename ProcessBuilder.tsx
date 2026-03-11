@@ -445,7 +445,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
             }
             {node.supplyMode === 'fixed' && node.fixedSupplyAmount != null
               ? <div className="text-amber-700 font-semibold">{node.fixedSupplyAmount}/{node.fixedSupplyPeriodUnit ?? 'week'} — begrensd</div>
-              : <div className="text-slate-400">Onbeperkt aanbod</div>
+              : <div className="text-slate-400">Unlimited supply</div>
             }
             {stepResult?.utilizationAtTarget != null && node.supplyMode === 'fixed' && (
               <div className={stepResult.utilizationAtTarget >= 0.9 ? 'text-red-500 font-semibold' : 'text-slate-500'}>
