@@ -127,7 +127,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
             />
             <NavItem
               icon={Package}
-              label="Materialen"
+              label="Materials"
               id="materials"
               active={activeTab === 'materials'}
               onClick={() => onTabChange('materials')}
