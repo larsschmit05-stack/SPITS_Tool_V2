@@ -415,8 +415,8 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
       </div>
 
       {/* Name */}
-      <div className="flex-1 px-3 flex flex-col justify-center pointer-events-none overflow-hidden">
-        <div className="font-semibold text-sm truncate text-slate-900 leading-tight">{node.name}</div>
+      <div className="flex-1 px-3 pb-2 flex flex-col pointer-events-none overflow-hidden">
+        <div className="font-semibold text-sm truncate text-slate-900 leading-tight mt-0.5">{node.name}</div>
 
         {/* KPIs / metadata */}
         {node.nodeType === 'resourceStep' && (
@@ -429,7 +429,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
                     {flowLoadPct !== null ? `${flowLoadPct.toFixed(0)}%` : '—'}
                   </span>
                 </div>
-                {stepResult.inflowUnitsPerHour !== undefined && (
+                {(isSelected || isMultiSelected) && stepResult.inflowUnitsPerHour !== undefined && (
                   <div className="text-slate-400">
                     ↓ {stepResult.inflowUnitsPerHour === null ? '∞' : `${formatRate(stepResult.inflowUnitsPerHour)} e/h`}
                     {stepResult.outflowUnitsPerHour !== undefined && (
@@ -446,7 +446,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         {node.nodeType === 'timeStep' && (
           <div className="mt-1 text-[10px] text-slate-500 space-y-px">
             {hasDuration ? `${node.durationMinutesPerUnit} min/unit` : <span className="italic text-amber-500">Enter duration</span>}
-            {stepResult?.inflowUnitsPerHour !== undefined && (
+            {(isSelected || isMultiSelected) && stepResult?.inflowUnitsPerHour !== undefined && (
               <div className="text-slate-400">
                 ↓ {stepResult.inflowUnitsPerHour === null ? '∞' : `${formatRate(stepResult.inflowUnitsPerHour)} e/h`}
                 {stepResult.outflowUnitsPerHour !== undefined && (
@@ -480,9 +480,19 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
           </div>
         )}
         {/* Non-source material flow badge */}
-        {resolvedOutputMaterialName && node.nodeType !== 'end' && node.nodeType !== 'start' && (
-          <div className="mt-1 text-[9px] text-indigo-600 font-medium truncate">
-            ↳ {resolvedOutputMaterialName}
+        {node.nodeType !== 'end' && node.nodeType !== 'start' && (
+          <div
+            className={`mt-auto inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-medium ${
+              resolvedOutputMaterialName
+                ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                : 'border-slate-200 bg-slate-50 text-slate-400'
+            }`}
+            title={resolvedOutputMaterialName ? `${resolvedOutputMaterialName} (from material flow)` : 'No output material configured'}
+          >
+            <Package className="w-2.5 h-2.5" />
+            <span className="truncate">
+              {resolvedOutputMaterialName ? resolvedOutputMaterialName : 'No material'}
+            </span>
           </div>
         )}
       </div>
