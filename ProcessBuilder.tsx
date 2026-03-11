@@ -360,8 +360,10 @@ interface NodeComponentProps {
   stepResult?: StepResult;
   flowLoadPct?: number | null;
   isBottleneck?: boolean;
-  /** Resolved output material name (from flow propagation) shown as badge on the node. */
+  /** Resolved output material name (from flow propagation). */
   resolvedOutputMaterialName?: string;
+  /** Resolved single upstream input material name when unambiguous. */
+  resolvedInputMaterialName?: string;
   onMouseDown: (e: React.MouseEvent, id: string) => void;
   onContextMenu: (e: React.MouseEvent, id: string) => void;
   onPortMouseDown: (e: React.MouseEvent, id: string, type: 'source' | 'target') => void;
@@ -370,7 +372,7 @@ interface NodeComponentProps {
 
 const NodeComponent: React.FC<NodeComponentProps> = ({
   node, isSelected, isMultiSelected, stepResult, flowLoadPct = null, isBottleneck = false,
-  resolvedOutputMaterialName,
+  resolvedOutputMaterialName, resolvedInputMaterialName,
   onMouseDown, onContextMenu, onPortMouseDown, onMouseUp
 }) => {
   const colors = nodeTypeColor(node.nodeType, isBottleneck);
@@ -384,11 +386,48 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
     shadowCls = 'shadow-md ring-2 ring-brand-500/30';
   }
 
-  const hasResource = node.nodeType === 'resourceStep' && node.resourceId;
   const hasDuration = node.nodeType === 'timeStep' && node.durationMinutesPerUnit;
-  const isUnconfigured =
-    (node.nodeType === 'resourceStep' && !node.resourceId) ||
-    (node.nodeType === 'timeStep' && !node.durationMinutesPerUnit);
+
+  const secondaryLine = (() => {
+    if (node.nodeType === 'resourceStep') {
+      return stepResult?.effectiveRateUnitsPerHour && stepResult.effectiveRateUnitsPerHour > 0
+        ? `${stepResult.effectiveRateUnitsPerHour.toFixed(1)} e/h`
+        : '—';
+    }
+    if (node.nodeType === 'timeStep') {
+      return hasDuration ? `${node.durationMinutesPerUnit} min/unit` : '—';
+    }
+    if (node.nodeType === 'start') {
+      if (stepResult?.outflowUnitsPerHour !== undefined) {
+        return stepResult.outflowUnitsPerHour === null ? '∞ e/h' : `${formatRate(stepResult.outflowUnitsPerHour)} e/h`;
+      }
+      if (node.supplyMode === 'fixed' && node.fixedSupplyAmount != null) {
+        const periodHours: Record<string, number> = { hour: 1, day: 24, week: 168 };
+        const ph = periodHours[node.fixedSupplyPeriodUnit ?? 'week'] ?? 168;
+        return `${formatRate(node.fixedSupplyAmount / ph)} e/h`;
+      }
+      return '∞ e/h';
+    }
+    return '—';
+  })();
+
+  const flowMaterialLine = (() => {
+    if (node.nodeType === 'end') return null;
+    if (resolvedInputMaterialName && resolvedOutputMaterialName && resolvedInputMaterialName !== resolvedOutputMaterialName) {
+      return `${resolvedInputMaterialName} → ${resolvedOutputMaterialName}`;
+    }
+    return resolvedOutputMaterialName ?? resolvedInputMaterialName ?? '—';
+  })();
+
+  const throughputLine = (() => {
+    if (node.nodeType === 'end') return null;
+    const inflow = stepResult?.inflowUnitsPerHour;
+    const outflow = stepResult?.outflowUnitsPerHour;
+    if (inflow === undefined && outflow === undefined) return '↓ — → —';
+    const inText = inflow === null ? '∞' : inflow === undefined ? '—' : formatRate(inflow);
+    const outText = outflow === null ? '∞' : outflow === undefined ? '—' : formatRate(outflow);
+    return `↓ ${inText} e/h → ${outText} e/h`;
+  })();
 
   return (
     <div
@@ -399,101 +438,25 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
       onMouseUp={(e) => onMouseUp(e, node.id)}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Header row */}
-      <div className="flex items-center gap-1.5 px-3 pt-2.5 pointer-events-none">
+      <div className="flex items-center gap-1.5 px-3 pt-2 pb-1 pointer-events-none">
         <span className={`text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded ${colors.badge}`}>
           {nodeTypeLabel(node.nodeType)}
         </span>
-        <div className="ml-auto flex items-center gap-1">
-          {isUnconfigured && (
-            <AlertTriangle className="w-3 h-3 text-amber-400" />
-          )}
-          {isBottleneck && (
-            <span className="text-[9px] font-black text-red-600 tracking-wide">⬛</span>
-          )}
-        </div>
+        {isBottleneck && (
+          <span className="ml-auto text-[9px] font-black text-red-600 tracking-wide">⬛</span>
+        )}
       </div>
 
-      {/* Name */}
-      <div className="flex-1 px-3 pb-2 flex flex-col pointer-events-none overflow-hidden">
-        <div className="font-semibold text-sm truncate text-slate-900 leading-tight mt-0.5">{node.name}</div>
-
-        {/* KPIs / metadata */}
-        {node.nodeType === 'resourceStep' && (
-          <div className="mt-1 text-[10px] text-slate-500 space-y-px">
-            {stepResult ? (
-              <>
-                <div className="flex gap-2">
-                  <span>{stepResult.effectiveRateUnitsPerHour > 0 ? `${stepResult.effectiveRateUnitsPerHour.toFixed(1)} e/h` : '—'}</span>
-                  <span className={flowLoadPct !== null && flowLoadPct > 90 ? 'text-red-500 font-semibold' : ''}>
-                    {flowLoadPct !== null ? `${flowLoadPct.toFixed(0)}%` : '—'}
-                  </span>
-                </div>
-                {(isSelected || isMultiSelected) && stepResult.inflowUnitsPerHour !== undefined && (
-                  <div className="text-slate-400">
-                    ↓ {stepResult.inflowUnitsPerHour === null ? '∞' : `${formatRate(stepResult.inflowUnitsPerHour)} e/h`}
-                    {stepResult.outflowUnitsPerHour !== undefined && (
-                      <> · ↑ {stepResult.outflowUnitsPerHour === null ? '∞' : `${formatRate(stepResult.outflowUnitsPerHour)} e/h`}</>
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              <span className="italic">{hasResource ? 'Scenario required for KPIs' : 'Link a resource'}</span>
-            )}
-          </div>
-        )}
-        {node.nodeType === 'timeStep' && (
-          <div className="mt-1 text-[10px] text-slate-500 space-y-px">
-            {hasDuration ? `${node.durationMinutesPerUnit} min/unit` : <span className="italic text-amber-500">Enter duration</span>}
-            {(isSelected || isMultiSelected) && stepResult?.inflowUnitsPerHour !== undefined && (
-              <div className="text-slate-400">
-                ↓ {stepResult.inflowUnitsPerHour === null ? '∞' : `${formatRate(stepResult.inflowUnitsPerHour)} e/h`}
-                {stepResult.outflowUnitsPerHour !== undefined && (
-                  <> · ↑ {stepResult.outflowUnitsPerHour === null ? '∞' : `${formatRate(stepResult.outflowUnitsPerHour)} e/h`}</>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-        {/* Source node: material + supply info */}
-        {node.nodeType === 'start' && (
-          <div className="mt-1 space-y-px text-[10px]">
-            {resolvedOutputMaterialName
-              ? <div className="text-indigo-600 font-medium truncate">↳ {resolvedOutputMaterialName}</div>
-              : <div className="italic text-amber-500">No material</div>
-            }
-            {node.supplyMode === 'fixed' && node.fixedSupplyAmount != null
-              ? <div className="text-amber-700 font-semibold">{node.fixedSupplyAmount}/{node.fixedSupplyPeriodUnit ?? 'week'} — begrensd</div>
-              : <div className="text-slate-400">Unlimited supply</div>
-            }
-            {stepResult?.utilizationAtTarget != null && node.supplyMode === 'fixed' && (
-              <div className={stepResult.utilizationAtTarget >= 0.9 ? 'text-red-500 font-semibold' : 'text-slate-500'}>
-                {(stepResult.utilizationAtTarget * 100).toFixed(0)}% target
-              </div>
-            )}
-            {stepResult?.outflowUnitsPerHour !== undefined && (
-              <div className="text-slate-400">
-                ↑ {stepResult.outflowUnitsPerHour === null ? '∞ onbeperkt' : `${formatRate(stepResult.outflowUnitsPerHour)} e/h`}
-              </div>
-            )}
-          </div>
-        )}
-        {/* Non-source material flow badge */}
-        {node.nodeType !== 'end' && node.nodeType !== 'start' && (
-          <div
-            className={`mt-auto inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 text-[9px] font-medium ${
-              resolvedOutputMaterialName
-                ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
-                : 'border-slate-200 bg-slate-50 text-slate-400'
-            }`}
-            title={resolvedOutputMaterialName ? `${resolvedOutputMaterialName} (from material flow)` : 'No output material configured'}
-          >
-            <Package className="w-2.5 h-2.5" />
-            <span className="truncate">
-              {resolvedOutputMaterialName ? resolvedOutputMaterialName : 'No material'}
-            </span>
-          </div>
+      <div className="flex-1 px-3 pb-2 flex flex-col gap-0.5 pointer-events-none overflow-hidden">
+        <div className="font-bold text-[13px] truncate text-slate-900 leading-tight">{node.name}</div>
+        {node.nodeType !== 'end' && (
+          <>
+            <div className="text-[10px] text-slate-600 truncate">{secondaryLine}</div>
+            <div className="text-[10px] text-slate-500 truncate" title={flowMaterialLine ?? ''}>{flowMaterialLine}</div>
+            <div className={`text-[10px] truncate ${flowLoadPct !== null && flowLoadPct > 90 ? 'text-red-500' : 'text-slate-400'}`}>
+              {throughputLine}
+            </div>
+          </>
         )}
       </div>
 
@@ -1523,8 +1486,10 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
 
           {/* Nodes */}
           {nodes.map(node => {
-            const resolvedOut = resolvedMaterials.get(node.id)?.outputId;
-            const resolvedOutMaterial = materialById(resolvedOut);
+            const resolvedNodeMaterial = resolvedMaterials.get(node.id);
+            const resolvedOutMaterial = materialById(resolvedNodeMaterial?.outputId);
+            const singleInputId = resolvedNodeMaterial?.inputIds.length === 1 ? resolvedNodeMaterial.inputIds[0] : undefined;
+            const resolvedInputMaterial = materialById(singleInputId);
             return (
               <NodeComponent
                 key={node.id}
@@ -1535,6 +1500,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
                 flowLoadPct={flowKpiByNodeId.get(node.id)?.utilizationPct ?? null}
                 isBottleneck={bottleneckStepId === node.id}
                 resolvedOutputMaterialName={resolvedOutMaterial ? `${resolvedOutMaterial.name} (${resolvedOutMaterial.unit})` : undefined}
+                resolvedInputMaterialName={resolvedInputMaterial ? `${resolvedInputMaterial.name} (${resolvedInputMaterial.unit})` : undefined}
                 onMouseDown={handleMouseDown}
                 onContextMenu={(e) => {
                   e.preventDefault(); e.stopPropagation();
