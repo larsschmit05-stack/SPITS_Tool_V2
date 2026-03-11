@@ -451,12 +451,12 @@ export function computeStepResults(
         requiredWorkHoursAtTarget: utilization !== null ? round4(targetGoodUnits / maxUph) : null,
         utilizationAtTarget: utilization,
         explain: [
-          `Vaste aanvoer: ${maxUph.toFixed(4)} e/h (${s.label})`,
-          `Kalenderhorizon: ${effectiveHours}h (${request.horizonCalendarDays} dagen × 24h)`,
-          `Max aanvoer over horizon: ${maxOverHorizon} eenheden`,
+          `Fixed inflow: ${maxUph.toFixed(4)} e/h (${s.label})`,
+          `Calendar horizon: ${effectiveHours}h (${request.horizonCalendarDays} days × 24h)`,
+          `Max inflow over horizon: ${maxOverHorizon} units`,
           utilization !== null
-            ? `Bezettingsgraad bij doel (${targetGoodUnits} e): ${(utilization * 100).toFixed(1)}%`
-            : 'Ongeldig: effectieve uren = 0',
+            ? `Utilization at target (${targetGoodUnits} e): ${(utilization * 100).toFixed(1)}%`
+            : 'Invalid: effective hours = 0',
         ],
       } satisfies StepResult;
     });
@@ -529,10 +529,10 @@ function buildExplain(
     } else if (resourceClass === 'delay') {
       const delayMins = r.delayTimeMinutes ?? 0;
       lines.push(
-        `Technische Vertraging: ${delayMins}min → max doorvoer ${round4(im.baseRate)} u/hr`
+        `Technical delay: ${delayMins}min → max throughput ${round4(im.baseRate)} u/hr`
       );
-      lines.push(`Geen afdeling — volledige kalendertijd beschikbaar (${round4(im.scheduledHours)}h)`);
-      lines.push(`Geen beschikbaarheidskorting of uitval (vertraging verbruikt geen capaciteit)`);
+      lines.push(`No department — full calendar time available (${round4(im.scheduledHours)}h)`);
+      lines.push(`No availability discount or yield loss (delay does not consume capacity)`);
     } else {
       // processing
       const processingMode = r.processingMode ?? r.type;
@@ -563,10 +563,10 @@ function buildExplain(
   }
 
   if (im.conversionRatio !== 1) {
-    lines.push(`Conversieratio: ${round4(im.conversionRatio)} output-eenheden per input-eenheid`);
+    lines.push(`Conversion ratio: ${round4(im.conversionRatio)} output units per input unit`);
   }
   lines.push(
-    `Cumulatieve factor naar einde = ${round4(cumYieldToEnd)} → stepMaxGoodUnitsPerHour = ${round4(stepMaxGoodUnitsPerHour)}`
+    `Cumulative factor to end = ${round4(cumYieldToEnd)} → stepMaxGoodUnitsPerHour = ${round4(stepMaxGoodUnitsPerHour)}`
   );
 
   if (utilizationAtTarget !== null) {

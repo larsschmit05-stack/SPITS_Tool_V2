@@ -139,7 +139,7 @@ function computeNodeFlowKpis(
         stepResult && stepResult.effectiveRateUnitsPerHour > 0 ? stepResult.effectiveRateUnitsPerHour : null;
 
       if (inflowRateUnitsPerHour !== null && effectiveRate !== null) {
-        // Builder-bezettingsgraad = actuele instroom / effectieve stapcapaciteit.
+        // Builder utilization = actual inflow / effective step capacity.
         utilizationPct = (inflowRateUnitsPerHour / effectiveRate) * 100;
         const conversionRatio = stepResult?.conversionRatio && stepResult.conversionRatio > 0
           ? stepResult.conversionRatio
@@ -433,7 +433,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
         )}
         {node.nodeType === 'timeStep' && (
           <div className="mt-1 text-[10px] text-slate-500">
-            {hasDuration ? `${node.durationMinutesPerUnit} min/eenheid` : <span className="italic text-amber-500">Vul duur in</span>}
+            {hasDuration ? `${node.durationMinutesPerUnit} min/unit` : <span className="italic text-amber-500">Enter duration</span>}
           </div>
         )}
         {/* Source node: material + supply info */}
@@ -657,16 +657,16 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                       : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
-                  <div className="text-sm font-bold mb-0.5">Vaste aanvoer</div>
+                  <div className="text-sm font-bold mb-0.5">Fixed inflow</div>
                   <div className="text-[10px] font-normal opacity-75">Source can become the limiter</div>
                 </button>
               </div>
             </div>
 
-            {/* Vaste aanvoer configuratie */}
+            {/* Fixed supply configuration */}
             {node.supplyMode === 'fixed' && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
-                <label className="block text-xs font-bold text-slate-700">Aanvoerhoeveelheid</label>
+                <label className="block text-xs font-bold text-slate-700">Supply amount</label>
                 <div className="flex items-center gap-2">
                   <NumericInput
                     min={0.001} step={1}
@@ -681,7 +681,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                     onChange={e => updateNode(node.id, { fixedSupplyPeriodUnit: e.target.value as 'hour' | 'day' | 'week' })}
                     className="text-sm border border-slate-300 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
-                    <option value="hour">uur</option>
+                    <option value="hour">hour</option>
                     <option value="day">day</option>
                     <option value="week">week</option>
                   </select>
@@ -716,7 +716,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   </div>
                   {stepResult.utilizationAtTarget != null && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Target-bezetting</span>
+                      <span className="text-slate-500">Target utilization</span>
                       <span className={`font-semibold ${stepResult.utilizationAtTarget >= 0.9 ? 'text-red-600' : 'text-emerald-600'}`}>
                         {(stepResult.utilizationAtTarget * 100).toFixed(1)}%
                       </span>
@@ -803,10 +803,10 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                     <div className="font-semibold">{selectedResource.name}</div>
                     <div className="text-blue-500">
                       {selectedResource.type === 'batch'
-                        ? `Batch: ${selectedResource.batchSize} st / ${selectedResource.cycleTimeMinutes} min`
+                        ? `Batch: ${selectedResource.batchSize} units / ${selectedResource.cycleTimeMinutes} min`
                         : `${selectedResource.outputPerHour} units/hour`
                       }
-                      {' · '}Beschikbaarheid {Math.round((selectedResource.availability ?? 1) * 100)}%
+                      {' · '}Availability {Math.round((selectedResource.availability ?? 1) * 100)}%
                     </div>
                     {selectedResource.parallelUnits > 1 && (
                       <div className="text-blue-500">× {selectedResource.parallelUnits} parallel units</div>
@@ -821,7 +821,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                     className="mt-2 flex items-center gap-1.5 text-xs text-brand-600 hover:text-brand-700 font-medium"
                   >
                     <ExternalLink className="w-3 h-3" />
-                    Bekijk in Resources
+                    View in Resources
                   </button>
                 )}
 
@@ -840,11 +840,11 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
             {/* TimeStep: duration */}
             {isTimeStep && (
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Transporttijd</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Transport time</label>
                 {!node.durationMinutesPerUnit && (
                   <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
                     <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>Vul duur in — standaard 60 min gebruikt</span>
+                    <span>Enter duration — default 60 min used</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
@@ -867,7 +867,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
             {/* Enabled toggle */}
             <div className="flex items-center justify-between py-1">
               <div>
-                <div className="text-xs font-bold text-slate-700">Actief in berekening</div>
+                <div className="text-xs font-bold text-slate-700">Active in calculation</div>
                 <div className="text-[10px] text-slate-500">Disabled = skipped in throughput</div>
               </div>
               <button
@@ -910,7 +910,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   {upstreamMaterial && (
                     <div className="flex items-center gap-2 text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
                       <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                      <span>Van upstream: <strong>{upstreamMaterial.name} ({upstreamMaterial.unit})</strong></span>
+                      <span>From upstream: <strong>{upstreamMaterial.name} ({upstreamMaterial.unit})</strong></span>
                     </div>
                   )}
                   {upstreamOutputIds.length > 1 && (
@@ -1003,7 +1003,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   {isResourceStep && (
                     <>
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Effectieve capaciteit</span>
+                        <span className="text-slate-500">Effective capacity</span>
                         <span className="font-semibold text-slate-800">
                           {stepResult.effectiveRateUnitsPerHour > 0
                             ? `${stepResult.effectiveRateUnitsPerHour.toFixed(1)} e/h`
@@ -1011,7 +1011,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                         </span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Bezettingsgraad</span>
+                        <span className="text-slate-500">Utilization</span>
                         <span className={`font-semibold ${
                           flowLoadPct !== null && flowLoadPct > 90
                             ? 'text-red-600'
@@ -1035,7 +1035,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                       )}
                       {targetUtilizationPct !== null && (
                         <div className="flex justify-between text-[11px] text-slate-400 pt-1">
-                          <span>Target-bezetting (scenario)</span>
+                          <span>Target utilization (scenario)</span>
                           <span>{targetUtilizationPct.toFixed(1)}%</span>
                         </div>
                       )}
@@ -1044,10 +1044,10 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
 
                   {isTimeStep && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Vertraging</span>
+                      <span className="text-slate-500">Delay</span>
                       <span className="font-semibold text-slate-800">
                         {stepResult.durationMinutesPerUnit
-                          ? `${stepResult.durationMinutesPerUnit} min/eenheid`
+                          ? `${stepResult.durationMinutesPerUnit} min/unit`
                           : '—'}
                       </span>
                     </div>
@@ -1088,7 +1088,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            Verwijder
+            Delete
           </button>
           <button
             onClick={onClose}
@@ -1363,7 +1363,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
               <button className="p-2 hover:bg-slate-50 rounded-md text-slate-500 transition-colors" title="Select">
                 <MousePointer2 className="w-4 h-4" />
               </button>
-              <button className="p-2 hover:bg-slate-50 rounded-md text-slate-500 transition-colors" title="Verplaats">
+              <button className="p-2 hover:bg-slate-50 rounded-md text-slate-500 transition-colors" title="Move">
                 <Move className="w-4 h-4" />
               </button>
               <div className="w-px h-6 bg-slate-200 mx-1 self-center" />
@@ -1371,7 +1371,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
                 onClick={() => setIsAddModalOpen(true)}
                 className="flex items-center gap-2 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 rounded-md text-sm font-bold text-white transition-all shadow-sm"
               >
-                <Plus className="w-4 h-4" /> Toevoegen
+                <Plus className="w-4 h-4" /> Add
               </button>
             </div>
 
@@ -1386,13 +1386,13 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
               {orphanCount > 0 && (
                 <span className="text-amber-600 font-semibold flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" />
-                  {orphanCount} zwevend
+                  {orphanCount} floating
                 </span>
               )}
               {orphanCount === 0 && sourceCount >= 1 && sinkCount === 1 && (
                 <span className="text-emerald-600 font-semibold flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
-                  Geldig
+                  Valid
                 </span>
               )}
             </div>
@@ -1407,7 +1407,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
             >
               <Trash2 className="w-4 h-4" />
               {multiSelectedNodeIds.length > 1 && (
-                <span className="text-xs font-bold">Verwijder ({multiSelectedNodeIds.length})</span>
+                <span className="text-xs font-bold">Delete ({multiSelectedNodeIds.length})</span>
               )}
             </button>
           </div>
@@ -1553,7 +1553,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
             onClick={() => handleMenuAction('delete')}
             className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors font-medium"
           >
-            <Trash2 className="w-3.5 h-3.5" /> Verwijder
+            <Trash2 className="w-3.5 h-3.5" /> Delete
           </button>
         </div>
       )}

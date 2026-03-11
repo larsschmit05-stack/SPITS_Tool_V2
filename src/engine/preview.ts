@@ -134,7 +134,7 @@ function validatePreviewResource(resource: PreviewResource): string[] {
 
   const avail = resource.availability ?? 1;
   if (!Number.isFinite(avail) || avail < VC.availability.min || avail > VC.availability.max) {
-    errors.push(`Beschikbaarheid moet tussen ${VC.availability.min * 100}% en 100% liggen`);
+    errors.push(`Availability must be between ${VC.availability.min * 100}% and 100%`);
   }
 
   if (resourceClass === 'processing') {
@@ -142,66 +142,66 @@ function validatePreviewResource(resource: PreviewResource): string[] {
     if (processingMode === 'continuous' || processingMode === 'manual') {
       const oph = resource.outputPerHour ?? 0;
       if (!Number.isFinite(oph) || oph < VC.outputPerHour.min) {
-        errors.push('Output per uur moet groter dan 0 zijn');
+        errors.push('Output per hour must be greater than 0');
       }
     }
     if (processingMode === 'batch') {
       const bs = resource.batchSize ?? 0;
       if (!Number.isFinite(bs) || bs < VC.batchSize.min) {
-        errors.push('Batchgrootte moet groter dan 0 zijn');
+        errors.push('Batch size must be greater than 0');
       }
       const ct = resource.cycleTimeMinutes ?? 0;
       if (!Number.isFinite(ct) || ct < VC.cycleTimeMinutes.min) {
-        errors.push('Cyclustijd moet groter dan 0 minuten zijn');
+        errors.push('Cycle time must be greater than 0 minutes');
       }
     }
     const yp = resource.yieldPct ?? 100;
     if (!Number.isFinite(yp) || yp < VC.yieldPct.min || yp > VC.yieldPct.max) {
-      errors.push(`Yield % moet tussen ${VC.yieldPct.min} en ${VC.yieldPct.max} liggen`);
+      errors.push(`Yield % must be between ${VC.yieldPct.min} and ${VC.yieldPct.max}`);
     }
     const pu = resource.parallelUnits ?? 1;
     if (!Number.isFinite(pu) || pu < VC.parallelUnits.min || !Number.isInteger(pu)) {
-      errors.push(`Parallel units moet een geheel getal >= ${VC.parallelUnits.min} zijn`);
+      errors.push(`Parallel units must be an integer >= ${VC.parallelUnits.min}`);
     }
     const su = resource.dailyStartupMinutes ?? 0;
     if (!Number.isFinite(su) || su < VC.dailyStartupMinutes.min) {
-      errors.push('Opstartminuten per dag moet >= 0 zijn');
+      errors.push('Daily startup minutes must be >= 0');
     }
   }
 
   if (resourceClass === 'buffer') {
     const sc = resource.slotCapacity ?? 0;
     if (!Number.isFinite(sc) || sc <= 0) {
-      errors.push('Slotcapaciteit is verplicht en moet groter dan 0 zijn');
+      errors.push('Slot capacity is required and must be greater than 0');
     }
     const dt = resource.dwellTimeMinutes;
     if (dt === undefined || dt === null || !Number.isFinite(dt) || dt < VC.dwellTimeMinutes.min) {
-      errors.push(`Verblijftijd is verplicht en moet >= ${VC.dwellTimeMinutes.min} minuut zijn`);
+      errors.push(`Dwell time is required and must be >= ${VC.dwellTimeMinutes.min} minute`);
     }
     const sm = resource.safetyMarginPct ?? 0;
     if (!Number.isFinite(sm) || sm < VC.safetyMarginPct.min || sm > VC.safetyMarginPct.max) {
-      errors.push(`Veiligheidsmarge moet tussen ${VC.safetyMarginPct.min} en ${VC.safetyMarginPct.max}% liggen`);
+      errors.push(`Safety margin must be between ${VC.safetyMarginPct.min} and ${VC.safetyMarginPct.max}%`);
     }
   }
 
   if (resourceClass === 'transport') {
     const pu = resource.parallelUnits ?? 1;
     if (!Number.isFinite(pu) || pu < VC.parallelUnits.min || !Number.isInteger(pu)) {
-      errors.push(`Parallel units moet een geheel getal >= ${VC.parallelUnits.min} zijn`);
+      errors.push(`Parallel units must be an integer >= ${VC.parallelUnits.min}`);
     }
     if (resource.transportMode === 'discrete') {
       const upt = resource.unitsPerTrip ?? 0;
       if (!Number.isFinite(upt) || upt < VC.unitsPerTrip.min) {
-        errors.push('Units per rit moet groter dan 0 zijn');
+        errors.push('Units per trip must be greater than 0');
       }
       const td = resource.tripDurationMinutes ?? 0;
       if (!Number.isFinite(td) || td < VC.tripDurationMinutes.min) {
-        errors.push(`Ritduur moet >= ${VC.tripDurationMinutes.min} minuut zijn`);
+        errors.push(`Trip duration must be >= ${VC.tripDurationMinutes.min} minute`);
       }
     } else {
       const oph = resource.outputPerHour ?? 0;
       if (!Number.isFinite(oph) || oph < VC.outputPerHour.min) {
-        errors.push('Output per uur moet groter dan 0 zijn (continu transport)');
+        errors.push('Output per hour must be greater than 0 (continuous transport)');
       }
     }
   }
@@ -252,75 +252,75 @@ export function computeEffectiveCapacityPreview(
   const breakdown: PreviewBreakdownStep[] = [];
 
   if (resourceClass === 'processing') {
-    breakdown.push({ label: 'Bruto output', value: round2(grossRatePerHour / parallelUnits), unit: 'u/uur (1 unit)' });
+    breakdown.push({ label: 'Gross output', value: round2(grossRatePerHour / parallelUnits), unit: 'units/hour (1 unit)' });
     if (parallelUnits > 1) {
-      breakdown.push({ label: `× ${parallelUnits} parallelle units`, value: round2(grossRatePerHour), unit: 'u/uur' });
+      breakdown.push({ label: `× ${parallelUnits} parallel units`, value: round2(grossRatePerHour), unit: 'units/hour' });
     }
     if (yieldFactor < 1) {
       breakdown.push({
-        label: `Na yield (${resource.yieldPct ?? 100}%)`,
+        label: `After yield (${resource.yieldPct ?? 100}%)`,
         value: round2(afterYieldPerHour),
-        unit: 'u/uur',
-        delta: `−${round2(grossRatePerHour - afterYieldPerHour)} u/uur`,
+        unit: 'units/hour',
+        delta: `−${round2(grossRatePerHour - afterYieldPerHour)} units/hour`,
       });
     }
-    breakdown.push({ label: 'Geplande uren/dag', value: round2(scheduledHoursPerDay), unit: 'u/dag' });
+    breakdown.push({ label: 'Scheduled hours/day', value: round2(scheduledHoursPerDay), unit: 'hours/day' });
     if (setupLossHoursPerDay > 0) {
       breakdown.push({
-        label: `Aftrek opstart (${dailyStartupMinutes} min)`,
+        label: `Startup deduction (${dailyStartupMinutes} min)`,
         value: round2(netHoursPerDay),
-        unit: 'u/dag beschikbaar',
-        delta: `−${round2(setupLossHoursPerDay)} u`,
+        unit: 'hours/day available',
+        delta: `−${round2(setupLossHoursPerDay)} h`,
       });
     }
     breakdown.push({
-      label: `Na beschikbaarheid (${Math.round(availability * 100)}%)`,
+      label: `After availability (${Math.round(availability * 100)}%)`,
       value: round2(effectiveHoursPerDay),
-      unit: 'u/dag effectief',
-      delta: `−${round2(netHoursPerDay - effectiveHoursPerDay)} u`,
+      unit: 'effective hours/day',
+      delta: `−${round2(netHoursPerDay - effectiveHoursPerDay)} h`,
     });
   } else if (resourceClass === 'buffer') {
     const safetyMarginPct = resource.safetyMarginPct ?? 0;
     const effectiveSlots = (resource.slotCapacity ?? 0) * (1 - safetyMarginPct / 100);
-    breakdown.push({ label: 'Slot capaciteit', value: resource.slotCapacity ?? 0, unit: resource.slotUnit ?? 'eenheden' });
+    breakdown.push({ label: 'Slot capacity', value: resource.slotCapacity ?? 0, unit: resource.slotUnit ?? 'units' });
     if (safetyMarginPct > 0) {
       breakdown.push({
-        label: `Na veiligheidsmarge (${safetyMarginPct}%)`,
+        label: `After safety margin (${safetyMarginPct}%)`,
         value: round2(effectiveSlots),
-        unit: resource.slotUnit ?? 'eenheden',
+        unit: resource.slotUnit ?? 'units',
         delta: `−${round2((resource.slotCapacity ?? 0) - effectiveSlots)}`,
       });
     }
     breakdown.push({
-      label: `Verblijftijd (${resource.dwellTimeMinutes ?? '?'} min)`,
+      label: `Dwell time (${resource.dwellTimeMinutes ?? '?'} min)`,
       value: round2(60 / (resource.dwellTimeMinutes ?? 1)),
-      unit: 'omzettengen/uur',
+      unit: 'turnovers/hour',
     });
-    breakdown.push({ label: 'Buffer doorvoer', value: round2(grossRatePerHour), unit: 'u/uur' });
-    breakdown.push({ label: 'Geplande uren/dag', value: round2(scheduledHoursPerDay), unit: 'u/dag' });
+    breakdown.push({ label: 'Buffer throughput', value: round2(grossRatePerHour), unit: 'units/hour' });
+    breakdown.push({ label: 'Scheduled hours/day', value: round2(scheduledHoursPerDay), unit: 'hours/day' });
     breakdown.push({
-      label: `Na beschikbaarheid (${Math.round(availability * 100)}%)`,
+      label: `After availability (${Math.round(availability * 100)}%)`,
       value: round2(effectiveHoursPerDay),
-      unit: 'u/dag effectief',
+      unit: 'effective hours/day',
     });
   } else {
     // transport
-    breakdown.push({ label: 'Doorvoer per voertuig', value: round2(baseRate), unit: 'u/uur' });
+    breakdown.push({ label: 'Throughput per vehicle', value: round2(baseRate), unit: 'units/hour' });
     if (parallelUnits > 1) {
-      breakdown.push({ label: `× ${parallelUnits} voertuig(en)`, value: round2(grossRatePerHour), unit: 'u/uur' });
+      breakdown.push({ label: `× ${parallelUnits} vehicle(s)`, value: round2(grossRatePerHour), unit: 'units/hour' });
     }
-    breakdown.push({ label: 'Geplande uren/dag', value: round2(scheduledHoursPerDay), unit: 'u/dag' });
+    breakdown.push({ label: 'Scheduled hours/day', value: round2(scheduledHoursPerDay), unit: 'hours/day' });
     breakdown.push({
-      label: `Na beschikbaarheid (${Math.round(availability * 100)}%)`,
+      label: `After availability (${Math.round(availability * 100)}%)`,
       value: round2(effectiveHoursPerDay),
-      unit: 'u/dag effectief',
+      unit: 'effective hours/day',
     });
   }
 
   breakdown.push({
-    label: 'Effectieve capaciteit/dag',
+    label: 'Effective capacity/day',
     value: round2(effectiveCapacityPerDay),
-    unit: 'u/dag',
+    unit: 'units/day',
   });
 
   return {

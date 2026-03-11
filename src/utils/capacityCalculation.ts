@@ -57,7 +57,7 @@ export function computeCapacityPreview(
     if (avgDeptHoursPerDay !== null && draft.dailyStartupMinutes) {
       const startupHrs = draft.dailyStartupMinutes / 60;
       if (startupHrs >= avgDeptHoursPerDay * (avail || 1)) {
-        warnings.push('Opstarttijd overtreft de beschikbare uren per dag');
+        warnings.push('Startup time exceeds available hours per day');
       }
     }
   } else if (cls === 'buffer') {
@@ -95,7 +95,7 @@ export function computeCapacityPreview(
   }
 
   if (effectiveRate !== null && effectiveRate > 10000) {
-    warnings.push('Waarde lijkt onrealistisch hoog (> 10.000 eenheden/uur)');
+    warnings.push('Value seems unrealistically high (> 10,000 units/hour)');
   }
 
   return { theoreticalRate, effectiveRate, warnings };
@@ -109,7 +109,7 @@ export function computeCapacityPreview(
  */
 export function formatCapacityRate(rate: number | null): string {
   if (rate === null) return '—';
-  if (rate < 0.001) return '< 0,001 /uur';
-  if (rate < 1) return `${rate.toFixed(3)} /uur`;
-  return `${rate.toFixed(1)} /uur`;
+  if (rate < 0.001) return '< 0.001 /hour';
+  if (rate < 1) return `${rate.toFixed(3)} /hour`;
+  return `${rate.toFixed(1)} /hour`;
 }

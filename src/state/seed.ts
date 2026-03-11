@@ -9,7 +9,7 @@ const SEED_TIMESTAMP = 1740000000000; // Fixed timestamp for reproducible seed d
 const SEED_TEMPLATES: ResourceTemplate[] = [
   {
     id: 'tpl-cnc-standard',
-    name: 'Standaard CNC',
+    name: 'Standard CNC',
     resourceClass: 'processing',
     processingMode: 'continuous',
     industry: 'discrete',
@@ -22,7 +22,7 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
       yieldPct: 95,
       availability: 0.9,
       dailyStartupMinutes: 15,
-      description: 'Standaard CNC-bewerkingscentrum. Gebruik als basis voor freesmachines en draaibanken.',
+      description: 'Standard CNC-bewerkingscentrum. Gebruik als basis voor freesmachines en draaibanken.',
     },
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
@@ -43,14 +43,14 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
       yieldPct: 98,
       availability: 0.92,
       dailyStartupMinutes: 20,
-      description: 'Standaard batch-oven voor warmtebehandeling.',
+      description: 'Standard batch oven for heat treatment.',
     },
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'tpl-quality-check',
-    name: 'Kwaliteitscontrole',
+    name: 'Quality Control',
     resourceClass: 'processing',
     processingMode: 'manual',
     industry: null,
@@ -63,14 +63,14 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
       yieldPct: 100,
       availability: 0.95,
       dailyStartupMinutes: 5,
-      description: 'Handmatige kwaliteitscontrole. Gebruik als startpunt voor inspectie- en meetstations.',
+      description: 'Manual quality control. Use as a starting point for inspection and measurement stations.',
     },
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'tpl-koelcel-standaard',
-    name: 'Koelcel Standaard',
+    name: 'Standard Cold Storage',
     resourceClass: 'buffer',
     industry: 'food',
     isSystemTemplate: true,
@@ -84,14 +84,14 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
       dailyStartupMinutes: 0,
       parallelUnits: 1,
       yieldPct: 100,
-      description: 'Standaard koelcel. Pas slotcapaciteit en verblijftijd aan op uw situatie.',
+      description: 'Standard cold storage. Adjust slot capacity and dwell time to your situation.',
     },
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'tpl-heftruck',
-    name: 'Heftruck (intern)',
+    name: 'Forklift (internal)',
     resourceClass: 'transport',
     transportMode: 'discrete',
     industry: null,
@@ -105,14 +105,14 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
       availability: 0.9,
       dailyStartupMinutes: 0,
       yieldPct: 100,
-      description: 'Intern transport per heftruck. Pas ritduur en laadvermogen aan.',
+      description: 'Internal transport by forklift. Adjust trip duration and load size.',
     },
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'tpl-cooling-delay',
-    name: 'Koelpauze',
+    name: 'Cooling Delay',
     resourceClass: 'delay',
     industry: 'food',
     isSystemTemplate: true,
@@ -124,7 +124,7 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
       yieldPct: 100,
       availability: 1,
       dailyStartupMinutes: 0,
-      description: 'Standaard koelpauze (bijv. na pasteurisatie). Pas wachttijd aan op uw proces.',
+      description: 'Standard cooling delay (e.g. after pasteurization). Adjust wait time for your process.',
     },
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
@@ -135,7 +135,7 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
  * Default project state with realistic capacity data for development/demo.
  *
  * Verification values (corrected — availability applied once, to hours):
- *   Dept "Productie": Mon–Fri 8h → 10 working days in a 2-week horizon = 80h/dept
+ *   Dept "Production": Mon–Fri 8h → 10 working days in a 2-week horizon = 80h/dept
  *   CNC:      startup 15min×10d = 2.5h → net 77.5h → effective 69.75h (×0.90)
  *             rate 50 u/hr × 1 unit = 50 u/hr, cumYield 0.95×0.98=0.931
  *             → maxGood/hr 46.55 → maxGood 3247 units
@@ -182,7 +182,7 @@ export const DEFAULT_PROJECT_STATE: ProjectState = {
   departments: [
     {
       id: 'dept-productie',
-      name: 'Productie',
+      name: 'Production',
       color: '#3B82F6',
       hoursByWeekday: {
         mon: 8,
@@ -197,7 +197,7 @@ export const DEFAULT_PROJECT_STATE: ProjectState = {
     },
     {
       id: 'dept-montage',
-      name: 'Montage',
+      name: 'Assembly',
       color: '#10B981',
       hoursByWeekday: {
         mon: 8,
@@ -212,7 +212,7 @@ export const DEFAULT_PROJECT_STATE: ProjectState = {
     },
     {
       id: 'dept-logistiek',
-      name: 'Logistiek',
+      name: 'Logistics',
       color: '#F59E0B',
       hoursByWeekday: {
         mon: 7,
@@ -230,12 +230,12 @@ export const DEFAULT_PROJECT_STATE: ProjectState = {
   steps: [
     {
       id: 'step-cnc-01',
-      name: 'CNC Bewerking',
+      name: 'CNC Machining',
       resourceId: 'res-cnc-01',
     },
     {
       id: 'step-assembly-01',
-      name: 'Assemblage',
+      name: 'Assembly',
       resourceId: 'res-assembly-01',
     },
   ],
@@ -260,13 +260,13 @@ export const DEFAULT_PROJECT_STATE: ProjectState = {
     {
       id: 'node-start',
       nodeType: 'start',
-      name: 'Bron',
+      name: 'Source',
       position: { x: 60, y: 200 },
     },
     {
       id: 'node-cnc',
       nodeType: 'resourceStep',
-      name: 'CNC Bewerking',
+      name: 'CNC Machining',
       position: { x: 280, y: 200 },
       resourceId: 'res-cnc-01',
       enabled: true,
@@ -274,7 +274,7 @@ export const DEFAULT_PROJECT_STATE: ProjectState = {
     {
       id: 'node-transport',
       nodeType: 'timeStep',
-      name: 'Transport naar Montage',
+      name: 'Transport to Assembly',
       position: { x: 500, y: 200 },
       durationMinutesPerUnit: 15,
       enabled: true,
@@ -282,7 +282,7 @@ export const DEFAULT_PROJECT_STATE: ProjectState = {
     {
       id: 'node-assembly',
       nodeType: 'resourceStep',
-      name: 'Assemblage',
+      name: 'Assembly',
       position: { x: 720, y: 200 },
       resourceId: 'res-assembly-01',
       enabled: true,
@@ -290,7 +290,7 @@ export const DEFAULT_PROJECT_STATE: ProjectState = {
     {
       id: 'node-qc-wait',
       nodeType: 'timeStep',
-      name: 'Wachttijd Kwaliteitscontrole',
+      name: 'Quality Control Wait Time',
       position: { x: 940, y: 200 },
       durationMinutesPerUnit: 8,
       enabled: true,

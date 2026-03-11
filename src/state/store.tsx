@@ -17,6 +17,65 @@ import { DEFAULT_PROJECT_STATE } from './seed';
 
 const STORAGE_KEY = 'capaciteitstool_state_v2';
 
+const LEGACY_DUTCH_TO_ENGLISH: Record<string, string> = {
+  Productie: 'Production',
+  Montage: 'Assembly',
+  Logistiek: 'Logistics',
+  Bron: 'Source',
+  'CNC Bewerking': 'CNC Machining',
+  Assemblage: 'Assembly',
+  'Transport naar Montage': 'Transport to Assembly',
+  'Wachttijd Kwaliteitscontrole': 'Quality Control Wait Time',
+  'Standaard CNC': 'Standard CNC',
+  Kwaliteitscontrole: 'Quality Control',
+  'Koelcel Standaard': 'Standard Cold Storage',
+  'Heftruck (intern)': 'Forklift (internal)',
+  Koelpauze: 'Cooling Delay',
+  'Standaard CNC-bewerkingscentrum. Gebruik als basis voor freesmachines en draaibanken.':
+    'Standard CNC machining center. Use as a baseline for milling machines and lathes.',
+  'Standaard batch-oven voor warmtebehandeling.': 'Standard batch oven for heat treatment.',
+  'Handmatige kwaliteitscontrole. Gebruik als startpunt voor inspectie- en meetstations.':
+    'Manual quality control. Use as a starting point for inspection and measurement stations.',
+  'Standaard koelcel. Pas slotcapaciteit en verblijftijd aan op uw situatie.':
+    'Standard cold storage. Adjust slot capacity and dwell time to your situation.',
+  'Intern transport per heftruck. Pas ritduur en laadvermogen aan.':
+    'Internal transport by forklift. Adjust trip duration and load size.',
+  'Standaard koelpauze (bijv. na pasteurisatie). Pas wachttijd aan op uw proces.':
+    'Standard cooling delay (e.g. after pasteurization). Adjust wait time for your process.',
+};
+
+function translateLegacyDutch(value: string | undefined): string | undefined {
+  if (!value) return value;
+  return LEGACY_DUTCH_TO_ENGLISH[value] ?? value;
+}
+
+function migrateLegacyDutchUi(parsed: Partial<ProjectState>): Partial<ProjectState> {
+  return {
+    ...parsed,
+    departments: (parsed.departments ?? []).map((d) => ({
+      ...d,
+      name: translateLegacyDutch(d.name),
+    })),
+    resources: (parsed.resources ?? []).map((r) => ({
+      ...r,
+      name: translateLegacyDutch(r.name),
+    })),
+    templates: (parsed.templates ?? []).map((t) => ({
+      ...t,
+      name: translateLegacyDutch(t.name),
+      defaultConfig: t.defaultConfig,
+    })),
+    steps: (parsed.steps ?? []).map((s) => ({
+      ...s,
+      name: translateLegacyDutch(s.name),
+    })),
+    nodes: (parsed.nodes ?? []).map((n) => ({
+      ...n,
+      name: translateLegacyDutch(n.name),
+    })),
+  };
+}
+
 /** State keys that are persisted to localStorage. Runtime-only keys are excluded. */
 const PERSISTED_STATE_KEYS: (keyof ProjectState)[] = [
   'materials',
@@ -651,7 +710,7 @@ export function appReducer(state: ProjectState, action: AppAction): ProjectState
       if (hasStart && hasEnd) return state; // Nothing to do
       let nodes = [...state.nodes];
       if (!hasStart) {
-        nodes = [...nodes, { id: uid(), nodeType: 'start' as const, name: 'Bron', position: { x: 60, y: 200 } }];
+        nodes = [...nodes, { id: uid(), nodeType: 'start' as const, name: 'Source', position: { x: 60, y: 200 } }];
       }
       if (!hasEnd) {
         const maxX = nodes.reduce((m, n) => Math.max(m, n.position.x), 0);
@@ -764,7 +823,7 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved) as Partial<ProjectState>;
+        const parsed = migrateLegacyDutchUi(JSON.parse(saved) as Partial<ProjectState>);
 
         // --- Migration: v1 → v2 ---
         // 1. Resources without resourceClass default to 'processing'.
@@ -793,7 +852,6 @@ export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({
                 yieldPct: r.yieldPct,
                 availability: r.availability,
                 dailyStartupMinutes: r.dailyStartupMinutes,
-                description: r.description,
               },
               createdAt: now,
               updatedAt: now,
