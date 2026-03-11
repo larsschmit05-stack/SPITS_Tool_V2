@@ -111,7 +111,7 @@ export const Departments: React.FC = () => {
 
   const handleAddDepartment = () => {
     const newDept: Partial<Department> = {
-      name: 'Nieuwe Afdeling',
+      name: 'New Department',
       color: '#3B82F6',
       hoursByWeekday: {
         mon: 8,
@@ -143,11 +143,11 @@ export const Departments: React.FC = () => {
     if (selectedId === '__new__') {
       // Add new department
       addDepartment(draft as Omit<Department, 'id'>);
-      showToast('Afdeling toegevoegd');
+      showToast('Department added');
     } else {
       // Update existing
       updateDepartment(draft as Department);
-      showToast('Afdeling bijgewerkt');
+      showToast('Department updated');
     }
 
     setSelectedId(null);
@@ -173,13 +173,13 @@ export const Departments: React.FC = () => {
 
     if (resourcesInDept > 0) {
       setErrors({
-        _delete: `Kan niet verwijderen: ${resourcesInDept} resource${resourcesInDept !== 1 ? 's' : ''} is/zijn toegewezen`,
+        _delete: `Cannot delete: ${resourcesInDept} resource${resourcesInDept !== 1 ? 's' : ''} assigned`,
       });
       return;
     }
 
     deleteDepartment(selectedId);
-    showToast('Afdeling verwijderd');
+    showToast('Department removed');
     setSelectedId(null);
     setDraft(null);
     setErrors({});
@@ -217,11 +217,11 @@ export const Departments: React.FC = () => {
         <div className="p-4 border-b border-slate-200 bg-slate-50/50">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest">
-              Afdelingen
+              Departments
             </h3>
             <button
               onClick={handleAddDepartment}
-              title="Nieuwe afdeling"
+              title="New department"
               className="p-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-md transition-all"
             >
               <Plus className="w-4 h-4" />
@@ -233,7 +233,7 @@ export const Departments: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Zoeken..."
+              placeholder="Search..."
               className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -274,7 +274,7 @@ export const Departments: React.FC = () => {
             ))
           ) : (
             <div className="p-6 text-center text-slate-400 text-xs">
-              Geen afdelingen gevonden
+              No departments found
             </div>
           )}
         </div>
@@ -297,7 +297,7 @@ export const Departments: React.FC = () => {
                 )}
                 <div>
                   <div className="text-sm font-semibold text-slate-800">
-                    {draft.name || 'Nieuwe Afdeling'}
+                    {draft.name || 'New Department'}
                   </div>
                   <div className="text-xs text-slate-500">
                     {weeklyTotal}h/week
@@ -338,18 +338,18 @@ export const Departments: React.FC = () => {
               <div className="space-y-4">
 
                 {/* Name */}
-                <Field label="Naam" required error={errors.name}>
+                <Field label="Name" required error={errors.name}>
                   <input
                     type="text"
                     value={draft.name ?? ''}
                     onChange={e => patchDraft('name', e.target.value)}
                     className={inputCls(errors.name)}
-                    placeholder="Bijv. Productie, Montage..."
+                    placeholder="e.g. Production, Assembly..."
                   />
                 </Field>
 
                 {/* Color */}
-                <Field label="Kleur" required error={errors.color}>
+                <Field label="Color" required error={errors.color}>
                   <div className="flex items-center gap-2">
                     <input
                       type="color"
@@ -364,33 +364,33 @@ export const Departments: React.FC = () => {
                 {/* Weekly total (display only) */}
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                   <div className="text-xs font-bold text-blue-700 uppercase tracking-widest">
-                    Totaal uren per week
+                    Total hours per week
                   </div>
                   <div className="text-2xl font-bold text-blue-900 mt-1">
                     {weeklyTotal}h
                   </div>
                   <div className="text-xs text-blue-600 mt-1">
-                    {weeklyTotal > 168 && 'Te hoog: max 168h'}
-                    {weeklyTotal <= 0 && 'Te laag: min > 0h'}
-                    {weeklyTotal > 0 && weeklyTotal <= 168 && 'Geldige capaciteit'}
+                    {weeklyTotal > 168 && 'Too high: max 168h'}
+                    {weeklyTotal <= 0 && 'Too low: min > 0h'}
+                    {weeklyTotal > 0 && weeklyTotal <= 168 && 'Valid capacity'}
                   </div>
                 </div>
 
                 {/* Daily hours inputs */}
                 <div>
                   <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
-                    Uren per dag
+                    Hours per day
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const).map(day => {
                       const dayLabels: Record<string, string> = {
-                        mon: 'Ma',
-                        tue: 'Di',
-                        wed: 'Wo',
-                        thu: 'Do',
-                        fri: 'Vr',
-                        sat: 'Za',
-                        sun: 'Zo',
+                        mon: 'Mon',
+                        tue: 'Tue',
+                        wed: 'Wed',
+                        thu: 'Thu',
+                        fri: 'Fri',
+                        sat: 'Sat',
+                        sun: 'Sun',
                       };
                       return (
                         <div key={day}>
@@ -428,7 +428,7 @@ export const Departments: React.FC = () => {
                         {resourcesInSelectedDept} resource{resourcesInSelectedDept !== 1 ? 's' : ''} toegewezen
                       </div>
                     ) : (
-                      <div className="text-xs text-slate-400">Geen resources toegewezen</div>
+                      <div className="text-xs text-slate-400">No resources assigned</div>
                     )}
                   </div>
                 )}
@@ -442,14 +442,14 @@ export const Departments: React.FC = () => {
                 {showDeleteConfirm ? (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                     <p className="text-xs text-red-700 font-semibold mb-2">
-                      Weet je zeker? Dit kan niet ongedaan worden.
+                      Are you sure? This cannot be undone.
                     </p>
                     <div className="flex gap-2">
                       <button
                         onClick={handleDelete}
                         className="flex-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-md transition-all"
                       >
-                        Verwijderen
+                        Delete
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(false)}
@@ -470,7 +470,7 @@ export const Departments: React.FC = () => {
                     }`}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Verwijderen
+                    Delete
                   </button>
                 )}
               </div>
@@ -478,7 +478,7 @@ export const Departments: React.FC = () => {
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
-            Selecteer een afdeling om te bewerken
+            Select a department to edit
           </div>
         )}
       </div>

@@ -243,7 +243,7 @@ const AddStepModal = ({
         onClick={e => e.stopPropagation()}
       >
         <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-          <h3 className="text-base font-bold text-slate-900">Toevoegen aan flow</h3>
+          <h3 className="text-base font-bold text-slate-900">Add to flow</h3>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-md transition-colors">
             <X className="w-4 h-4 text-slate-500" />
           </button>
@@ -255,7 +255,7 @@ const AddStepModal = ({
             onClick={() => {
               onAddNode({
                 nodeType: 'start',
-                name: sourcesCount === 0 ? 'Bron' : `Bron ${sourcesCount + 1}`,
+                name: sourcesCount === 0 ? 'Source' : `Source ${sourcesCount + 1}`,
                 position: { x: 60, y: 200 + sourcesCount * 130 },
                 supplyMode: 'unlimited',
               });
@@ -266,8 +266,8 @@ const AddStepModal = ({
             <div className="flex items-center gap-3">
               <PlayCircle className="w-5 h-5 text-emerald-600" />
               <div>
-                <div className="font-bold text-sm text-slate-900">Bron (Source)</div>
-                <div className="text-xs text-slate-500">Startpunt van materiaalstroom — meerdere bronnen zijn toegestaan</div>
+                <div className="font-bold text-sm text-slate-900">Source</div>
+                <div className="text-xs text-slate-500">Start point of material flow — multiple sources are allowed</div>
               </div>
             </div>
           </button>
@@ -288,8 +288,8 @@ const AddStepModal = ({
             <div className="flex items-center gap-3">
               <Settings2 className="w-5 h-5 text-blue-600" />
               <div>
-                <div className="font-bold text-sm text-slate-900">Processtap</div>
-                <div className="text-xs text-slate-500">Koppel aan een resource uit de bibliotheek</div>
+                <div className="font-bold text-sm text-slate-900">Process step</div>
+                <div className="text-xs text-slate-500">Link to a resource from the library</div>
               </div>
             </div>
           </button>
@@ -300,7 +300,7 @@ const AddStepModal = ({
               const pos = nextPos();
               onAddNode({
                 nodeType: 'timeStep',
-                name: `Wachttijd ${nodes.filter(n => n.nodeType === 'timeStep').length + 1}`,
+                name: `Delay ${nodes.filter(n => n.nodeType === 'timeStep').length + 1}`,
                 durationMinutesPerUnit: 60,
                 position: pos,
               });
@@ -311,8 +311,8 @@ const AddStepModal = ({
             <div className="flex items-center gap-3">
               <Clock className="w-5 h-5 text-amber-600" />
               <div>
-                <div className="font-bold text-sm text-slate-900">Tijdstap</div>
-                <div className="text-xs text-slate-500">Wacht- of transporttijd, geen capaciteit</div>
+                <div className="font-bold text-sm text-slate-900">Time step</div>
+                <div className="text-xs text-slate-500">Wait or transport time, no capacity</div>
               </div>
             </div>
           </button>
@@ -427,7 +427,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
                 </div>
               </>
             ) : (
-              <span className="italic">{hasResource ? 'Scenario vereist voor KPIs' : 'Koppel een resource'}</span>
+              <span className="italic">{hasResource ? 'Scenario required for KPIs' : 'Link a resource'}</span>
             )}
           </div>
         )}
@@ -441,7 +441,7 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
           <div className="mt-1 space-y-px text-[10px]">
             {resolvedOutputMaterialName
               ? <div className="text-indigo-600 font-medium truncate">↳ {resolvedOutputMaterialName}</div>
-              : <div className="italic text-amber-500">Geen materiaal</div>
+              : <div className="italic text-amber-500">No material</div>
             }
             {node.supplyMode === 'fixed' && node.fixedSupplyAmount != null
               ? <div className="text-amber-700 font-semibold">{node.fixedSupplyAmount}/{node.fixedSupplyPeriodUnit ?? 'week'} — begrensd</div>
@@ -586,7 +586,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
             <div className="mb-3 p-3 bg-slate-100 rounded-xl inline-block">
               <StopCircle className="w-6 h-6 text-slate-500" />
             </div>
-            <p className="text-sm text-slate-500">Proces eindpunt — geen configuratie nodig.</p>
+            <p className="text-sm text-slate-500">Process endpoint — no configuration needed.</p>
           </div>
         )}
 
@@ -596,9 +596,9 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
         {node.nodeType === 'start' && (
           <div className="p-4 space-y-5">
 
-            {/* Naam */}
+            {/* Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Naam</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Name</label>
               <input
                 type="text"
                 value={nameVal}
@@ -609,16 +609,16 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
               />
             </div>
 
-            {/* Materiaal */}
+            {/* Material */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Materiaal</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Material</label>
               <p className="text-[10px] text-slate-500 mb-2">
-                Het materiaal dat deze bron invoert in de flow. Volgende stappen erven dit automatisch.
+                The material this source feeds into the flow. Next steps inherit it automatically.
               </p>
               {(state.materials ?? []).length === 0 ? (
                 <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                   <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>Maak eerst materialen aan op de Materialen-pagina</span>
+                  <span>First create materials on the Materials page</span>
                 </div>
               ) : (
                 <select
@@ -626,7 +626,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   onChange={e => updateNode(node.id, { outputMaterialId: e.target.value || undefined })}
                   className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                 >
-                  <option value="">— Geen materiaal —</option>
+                  <option value="">— No material —</option>
                   {(state.materials ?? []).map(m => (
                     <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
                   ))}
@@ -647,7 +647,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   }`}
                 >
                   <div className="text-sm font-bold mb-0.5">∞ Onbeperkt</div>
-                  <div className="text-[10px] font-normal opacity-75">Capaciteit bepaald door processtappen</div>
+                  <div className="text-[10px] font-normal opacity-75">Capacity determined by process steps</div>
                 </button>
                 <button
                   onClick={() => updateNode(node.id, { supplyMode: 'fixed', fixedSupplyPeriodUnit: node.fixedSupplyPeriodUnit ?? 'week' })}
@@ -658,7 +658,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   }`}
                 >
                   <div className="text-sm font-bold mb-0.5">Vaste aanvoer</div>
-                  <div className="text-[10px] font-normal opacity-75">Bron kan limiter worden</div>
+                  <div className="text-[10px] font-normal opacity-75">Source can become the limiter</div>
                 </button>
               </div>
             </div>
@@ -672,7 +672,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                     min={0.001} step={1}
                     value={node.fixedSupplyAmount}
                     onChange={v => updateNode(node.id, { fixedSupplyAmount: v })}
-                    placeholder="bijv. 500"
+                    placeholder="e.g. 500"
                     className="flex-1 text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                   />
                   <span className="text-xs text-slate-500 whitespace-nowrap">per</span>
@@ -682,7 +682,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                     className="text-sm border border-slate-300 rounded-lg px-2 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
                     <option value="hour">uur</option>
-                    <option value="day">dag</option>
+                    <option value="day">day</option>
                     <option value="week">week</option>
                   </select>
                 </div>
@@ -691,14 +691,14 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   const uph = node.fixedSupplyAmount / (ph[node.fixedSupplyPeriodUnit ?? 'week'] ?? 168);
                   return (
                     <p className="text-[10px] text-amber-700">
-                      ≈ {uph.toFixed(2)} eenheden/uur — de bron kan de bottleneck worden als dit lager is dan de processtappen.
+                      ≈ {uph.toFixed(2)} units/hour — the source can become the bottleneck if this is lower than the process steps.
                     </p>
                   );
                 })()}
               </div>
             )}
 
-            {/* KPI blok voor fixed-supply bron */}
+            {/* KPI block for fixed-supply source */}
             {node.supplyMode === 'fixed' && stepResult && (
               <div className="border-t border-slate-100 pt-4">
                 <div className="flex items-center gap-1.5 mb-3">
@@ -707,12 +707,12 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Max doorvoer</span>
+                    <span className="text-slate-500">Max throughput</span>
                     <span className="font-semibold">{stepResult.effectiveRateUnitsPerHour.toFixed(2)} e/h</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-500">Max over horizon</span>
-                    <span className="font-semibold">{Math.round(stepResult.stepMaxGoodUnitsOverHorizon).toLocaleString()} eenheden</span>
+                    <span className="font-semibold">{Math.round(stepResult.stepMaxGoodUnitsOverHorizon).toLocaleString()} units</span>
                   </div>
                   {stepResult.utilizationAtTarget != null && (
                     <div className="flex justify-between text-xs">
@@ -725,7 +725,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   {isBottleneck && (
                     <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-2.5 py-2 mt-2">
                       <span className="font-black">⬛</span>
-                      <span className="font-semibold">Aanvoerafknijping — bron beperkt de doorvoer</span>
+                      <span className="font-semibold">Input throttling — source limits throughput</span>
                     </div>
                   )}
                 </div>
@@ -745,7 +745,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg border border-red-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              Verwijder bron
+              Remove source
             </button>
             <button
               onClick={onClose}
@@ -761,7 +761,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
           <div className="p-4 space-y-4">
             {/* Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Naam</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Name</label>
               <input
                 type="text"
                 value={nameVal}
@@ -779,7 +779,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                 {!node.resourceId && (
                   <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2">
                     <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>Selecteer een resource om KPIs te berekenen</span>
+                    <span>Select a resource to calculate KPIs</span>
                   </div>
                 )}
                 <select
@@ -789,7 +789,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   }}
                   className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
                 >
-                  <option value="">— Kies een resource —</option>
+                  <option value="">— Choose a resource —</option>
                   {availableResources.map(r => (
                     <option key={r.id} value={r.id}>
                       {r.name}
@@ -804,12 +804,12 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                     <div className="text-blue-500">
                       {selectedResource.type === 'batch'
                         ? `Batch: ${selectedResource.batchSize} st / ${selectedResource.cycleTimeMinutes} min`
-                        : `${selectedResource.outputPerHour} eenheden/uur`
+                        : `${selectedResource.outputPerHour} units/hour`
                       }
                       {' · '}Beschikbaarheid {Math.round((selectedResource.availability ?? 1) * 100)}%
                     </div>
                     {selectedResource.parallelUnits > 1 && (
-                      <div className="text-blue-500">× {selectedResource.parallelUnits} parallelle eenheden</div>
+                      <div className="text-blue-500">× {selectedResource.parallelUnits} parallel units</div>
                     )}
                   </div>
                 )}
@@ -831,7 +831,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                     className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 hover:text-brand-600 font-medium"
                   >
                     <Plus className="w-3 h-3" />
-                    Maak nieuwe resource aan
+                    Create new resource
                   </button>
                 )}
               </div>
@@ -868,7 +868,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
             <div className="flex items-center justify-between py-1">
               <div>
                 <div className="text-xs font-bold text-slate-700">Actief in berekening</div>
-                <div className="text-[10px] text-slate-500">Uitgeschakeld = overgeslagen in doorvoer</div>
+                <div className="text-[10px] text-slate-500">Disabled = skipped in throughput</div>
               </div>
               <button
                 onClick={handleEnabledToggle}
@@ -889,7 +889,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 }
                 <Package className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-xs font-bold text-slate-600">Materiaal conversie</span>
+                <span className="text-xs font-bold text-slate-600">Material conversion</span>
                 {node.conversionRatio && node.conversionRatio !== 1 && (
                   <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-semibold">
                     ×{node.conversionRatio}
@@ -902,7 +902,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   {(state.materials ?? []).length === 0 && (
                     <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
                       <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>Maak eerst materialen aan op de Materialen-pagina</span>
+                      <span>First create materials on the Materials page</span>
                     </div>
                   )}
 
@@ -915,7 +915,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   )}
                   {upstreamOutputIds.length > 1 && (
                     <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2 space-y-1">
-                      <div className="font-medium">Inputs van upstream ({upstreamOutputIds.length})</div>
+                      <div className="font-medium">Inputs from upstream ({upstreamOutputIds.length})</div>
                       <ul className="list-disc list-inside text-[11px]">
                         {upstreamOutputIds.map((id) => {
                           const m = materialById(id);
@@ -927,21 +927,21 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
 
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      Input materiaal
-                      <span className="ml-1 normal-case font-normal text-indigo-500">(automatisch van upstream)</span>
+                      Input material
+                      <span className="ml-1 normal-case font-normal text-indigo-500">(automatic from upstream)</span>
                     </label>
                     <div className="w-full text-xs border border-slate-200 rounded-lg px-2 py-2 bg-slate-50 text-slate-700 min-h-[30px]">
-                      {upstreamOutputIds.length === 0 && '— Geen upstream input —'}
+                      {upstreamOutputIds.length === 0 && '— No upstream input —'}
                       {upstreamOutputIds.length === 1 && (() => {
                         const m = materialById(upstreamOutputIds[0]);
                         return m ? `${m.name} (${m.unit})` : upstreamOutputIds[0];
                       })()}
-                      {upstreamOutputIds.length > 1 && `${upstreamOutputIds.length} materialen van upstream (zie lijst hierboven)`}
+                      {upstreamOutputIds.length > 1 && `${upstreamOutputIds.length} materials from upstream (see list above)`}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Output materiaal</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Output material</label>
                     <select
                       value={node.outputMaterialId ?? ''}
                       onChange={e => {
@@ -949,7 +949,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                       }}
                       className="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 bg-white"
                     >
-                      <option value="">— Geen —</option>
+                      <option value="">— None —</option>
                       {(state.materials ?? []).map(m => (
                         <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
                       ))}
@@ -972,7 +972,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                       className="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500"
                       placeholder="1"
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Bijv. 57.14 sachets per pot</p>
+                    <p className="text-[10px] text-slate-400 mt-1">e.g. 57.14 sachets per pot</p>
                   </div>
 
                   {(node.outputMaterialId || (node.conversionRatio && node.conversionRatio !== 1)) && (
@@ -995,7 +995,7 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
             <div className="border-t border-slate-100 pt-4">
               <div className="flex items-center gap-1.5 mb-3">
                 <Zap className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-xs font-bold text-slate-600">Capaciteit & Bezetting</span>
+                <span className="text-xs font-bold text-slate-600">Capacity & Utilization</span>
               </div>
 
               {stepResult ? (
@@ -1056,20 +1056,20 @@ const NodeDetailPanel: React.FC<NodeDetailPanelProps> = ({ node, stepResult, flo
                   {isBottleneck && (
                     <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-2.5 py-2 mt-1">
                       <span className="font-black text-sm">⬛</span>
-                      <span className="font-semibold">Flessenhals — beperkt de doorvoer</span>
+                      <span className="font-semibold">Bottleneck — limits throughput</span>
                     </div>
                   )}
 
                   {!isBottleneck && isResourceStep && flowLoadPct !== null && flowLoadPct < 90 && (
                     <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-2 mt-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Voldoende capaciteit beschikbaar</span>
+                      <span>Sufficient capacity available</span>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="text-xs text-slate-400 italic text-center py-2">
-                  Stel een scenario met vraag in om KPIs te zien
+                  Set a scenario with demand to view KPIs
                 </div>
               )}
             </div>
@@ -1360,7 +1360,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
           <div className="flex items-center gap-2">
             {/* Add button */}
             <div className="bg-white p-1 rounded-lg shadow-card border border-slate-200 pointer-events-auto flex gap-1">
-              <button className="p-2 hover:bg-slate-50 rounded-md text-slate-500 transition-colors" title="Selecteer">
+              <button className="p-2 hover:bg-slate-50 rounded-md text-slate-500 transition-colors" title="Select">
                 <MousePointer2 className="w-4 h-4" />
               </button>
               <button className="p-2 hover:bg-slate-50 rounded-md text-slate-500 transition-colors" title="Verplaats">
@@ -1378,7 +1378,7 @@ export const ProcessBuilder: React.FC<ProcessBuilderProps> = ({ onNavigate }) =>
             {/* Topology counts */}
             <div className="bg-white rounded-lg shadow-card border border-slate-200 px-3 py-1.5 flex items-center gap-3 pointer-events-auto text-xs text-slate-500">
               <span className={sourceCount >= 1 ? 'text-emerald-600 font-semibold' : 'text-red-500 font-semibold'}>
-                {sourceCount}× {sourceCount === 1 ? 'Bron' : 'Bronnen'}
+                {sourceCount}× {sourceCount === 1 ? 'Source' : 'Sources'}
               </span>
               <span className={sinkCount === 1 ? 'text-slate-600' : 'text-red-500 font-semibold'}>
                 {sinkCount}× Sink

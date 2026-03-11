@@ -1,7 +1,7 @@
 /**
  * ProcessElementCreationFlow Modal Component
  *
- * A 6-step guided wizard for creating resources in the Capaciteitstool.
+ * A 6-step guided wizard for creating resources in the Capacity Tool.
  *
  * Steps:
  * 1. Class selection (processing, buffer, transport, delay)
@@ -55,19 +55,19 @@ interface FormState {
 }
 
 const CLASS_OPTIONS: { value: ResourceClass; label: string; description: string }[] = [
-  { value: 'processing', label: 'Verwerking', description: 'Machine, lijn of handmatige bewerking' },
-  { value: 'buffer', label: 'Buffer', description: 'Opslag- of wachtruimte' },
-  { value: 'transport', label: 'Transport', description: 'Intern transport' },
-  { value: 'delay', label: 'Technische Vertraging', description: 'Wachttijd (koelen, drogen, etc.)' },
+  { value: 'processing', label: 'Processing', description: 'Machine, line, or manual operation' },
+  { value: 'buffer', label: 'Buffer', description: 'Storage or waiting area' },
+  { value: 'transport', label: 'Transport', description: 'Internal transport' },
+  { value: 'delay', label: 'Technical Delay', description: 'Wait time (cooling, drying, etc.)' },
 ];
 
 const STEP_LABELS: Record<FlowStep, string> = {
-  1: 'Type kiezen',
-  2: 'Basisinformatie',
+  1: 'Choose type',
+  2: 'Basic information',
   3: 'Parameters',
-  4: 'Geavanceerde instellingen',
-  5: 'Capaciteit controleren',
-  6: 'Bevestigen',
+  4: 'Advanced settings',
+  5: 'Check capacity',
+  6: 'Confirm',
 };
 
 interface FieldProps {
@@ -102,7 +102,7 @@ const Step1_ClassSelection: React.FC<{
   onUpdate: (cls: ResourceClass) => void;
 }> = ({ form, onUpdate }) => (
   <div className="space-y-3">
-    <h3 className="text-sm font-semibold text-slate-900 mb-4">Welk type proces-element wil je aanmaken?</h3>
+    <h3 className="text-sm font-semibold text-slate-900 mb-4">What type of process element do you want to create?</h3>
     <div className="space-y-2">
       {CLASS_OPTIONS.map(opt => (
         <button
@@ -130,24 +130,24 @@ const Step2_BasicInfo: React.FC<{
   onUpdate: (updates: Partial<FormState>) => void;
 }> = ({ form, errors, departments, onUpdate }) => (
   <div className="space-y-4">
-    <Field label="Naam" required error={errors.name}>
+    <Field label="Name" required error={errors.name}>
       <input
         type="text"
         value={form.name ?? ''}
         onChange={e => onUpdate({ name: e.target.value })}
-        placeholder="bijv. Pakketteringsmachine"
+        placeholder="e.g. Packaging machine"
         className={inputCls(errors.name)}
       />
     </Field>
 
     {form.resourceClass !== 'delay' && (
-      <Field label="Afdeling" required error={errors.departmentId}>
+      <Field label="Department" required error={errors.departmentId}>
         <select
           value={form.departmentId ?? ''}
           onChange={e => onUpdate({ departmentId: e.target.value })}
           className={inputCls(errors.departmentId)}
         >
-          <option value="">— Selecteer afdeling —</option>
+          <option value="">— Select department —</option>
           {departments.map(d => (
             <option key={d.id} value={d.id}>{d.name}</option>
           ))}
@@ -168,7 +168,7 @@ const Step3_Parameters: React.FC<{
   if (form.resourceClass === 'processing') {
     return (
       <div className="space-y-4">
-        <Field label="Verwerkingsmodus">
+        <Field label="Processing mode">
           <select
             value={form.processingMode ?? 'continuous'}
             onChange={e => onUpdate({
@@ -179,14 +179,14 @@ const Step3_Parameters: React.FC<{
             })}
             className={inputCls()}
           >
-            <option value="continuous">Continu (uursnelheid)</option>
-            <option value="manual">Handmatig / Arbeid (cyclustijd)</option>
-            <option value="batch">Batch (grootte + cyclustijd)</option>
+            <option value="continuous">Continuous (hourly rate)</option>
+            <option value="manual">Manual / Labor (cycle time)</option>
+            <option value="batch">Batch (size + cycle time)</option>
           </select>
         </Field>
 
         {(form.processingMode === 'continuous' || form.processingMode === 'manual') && (
-          <Field label={form.processingMode === 'manual' ? 'Cyclustijd (min/eenheid)' : 'Doorvoer (eenheden/uur)'} required error={errors.outputPerHour}>
+          <Field label={form.processingMode === 'manual' ? 'Cycle time (min/unit)' : 'Throughput (units/hour)'} required error={errors.outputPerHour}>
             <input
               type="number"
               value={form.outputPerHour ?? ''}
@@ -199,7 +199,7 @@ const Step3_Parameters: React.FC<{
 
         {form.processingMode === 'batch' && (
           <>
-            <Field label="Batchgrootte (eenheden)" required error={errors.batchSize}>
+            <Field label="Batch size (units)" required error={errors.batchSize}>
               <input
                 type="number"
                 value={form.batchSize ?? ''}
@@ -208,7 +208,7 @@ const Step3_Parameters: React.FC<{
                 className={inputCls(errors.batchSize)}
               />
             </Field>
-            <Field label="Cyclustijd (minuten)" required error={errors.cycleTimeMinutes}>
+            <Field label="Cycle time (minutes)" required error={errors.cycleTimeMinutes}>
               <input
                 type="number"
                 value={form.cycleTimeMinutes ?? ''}
@@ -217,7 +217,7 @@ const Step3_Parameters: React.FC<{
                 className={inputCls(errors.cycleTimeMinutes)}
               />
             </Field>
-            <Field label="Voorbereidingstijd per batch (minuten)">
+            <Field label="Setup time per batch (minutes)">
               <input
                 type="number"
                 value={form.batchSetupMinutes ?? ''}
@@ -235,7 +235,7 @@ const Step3_Parameters: React.FC<{
   if (form.resourceClass === 'buffer') {
     return (
       <div className="space-y-4">
-        <Field label="Maximale capaciteit" required error={errors.slotCapacity}>
+        <Field label="Maximum capacity" required error={errors.slotCapacity}>
           <input
             type="number"
             value={form.slotCapacity ?? ''}
@@ -244,7 +244,7 @@ const Step3_Parameters: React.FC<{
             className={inputCls(errors.slotCapacity)}
           />
         </Field>
-        <Field label="Verblijftijd (minuten)" required error={errors.dwellTimeMinutes}>
+        <Field label="Dwell time (minutes)" required error={errors.dwellTimeMinutes}>
           <input
             type="number"
             value={form.dwellTimeMinutes ?? ''}
@@ -253,7 +253,7 @@ const Step3_Parameters: React.FC<{
             className={inputCls(errors.dwellTimeMinutes)}
           />
         </Field>
-        <Field label="Veiligheidsmarge (%)">
+        <Field label="Safety margin (%)">
           <input
             type="number"
             value={form.safetyMarginPct ?? 0}
@@ -270,7 +270,7 @@ const Step3_Parameters: React.FC<{
   if (form.resourceClass === 'transport') {
     return (
       <div className="space-y-4">
-        <Field label="Transporttype">
+        <Field label="Transport mode">
           <select
             value={form.transportMode ?? 'discrete'}
             onChange={e => onUpdate({
@@ -281,14 +281,14 @@ const Step3_Parameters: React.FC<{
             })}
             className={inputCls()}
           >
-            <option value="discrete">Rit-gebaseerd (vracht + ritduur)</option>
-            <option value="continuous">Continu (band/conveyor)</option>
+            <option value="discrete">Trip-based (load + trip duration)</option>
+            <option value="continuous">Continuous (belt/conveyor)</option>
           </select>
         </Field>
 
         {form.transportMode === 'discrete' && (
           <>
-            <Field label="Lading per rit (eenheden)" required error={errors.unitsPerTrip}>
+            <Field label="Load per trip (units)" required error={errors.unitsPerTrip}>
               <input
                 type="number"
                 value={form.unitsPerTrip ?? ''}
@@ -297,7 +297,7 @@ const Step3_Parameters: React.FC<{
                 className={inputCls(errors.unitsPerTrip)}
               />
             </Field>
-            <Field label="Ritduur (minuten)" required error={errors.tripDurationMinutes}>
+            <Field label="Trip duration (minutes)" required error={errors.tripDurationMinutes}>
               <input
                 type="number"
                 value={form.tripDurationMinutes ?? ''}
@@ -310,7 +310,7 @@ const Step3_Parameters: React.FC<{
         )}
 
         {form.transportMode === 'continuous' && (
-          <Field label="Doorvoer (eenheden/uur)" required error={errors.outputPerHour}>
+          <Field label="Throughput (units/hour)" required error={errors.outputPerHour}>
             <input
               type="number"
               value={form.outputPerHour ?? ''}
@@ -327,7 +327,7 @@ const Step3_Parameters: React.FC<{
   if (form.resourceClass === 'delay') {
     return (
       <div className="space-y-4">
-        <Field label="Wachttijd (minuten)" required error={errors.delayTimeMinutes}>
+        <Field label="Wait time (minutes)" required error={errors.delayTimeMinutes}>
           <input
             type="number"
             value={form.delayTimeMinutes ?? ''}
@@ -336,13 +336,13 @@ const Step3_Parameters: React.FC<{
             className={inputCls(errors.delayTimeMinutes)}
           />
         </Field>
-        <Field label="Hoe geldt de vertraging?">
+        <Field label="How is the delay applied?">
           <select
             value={form.delayMode ?? 'per_unit'}
             onChange={e => onUpdate({ delayMode: e.target.value as any })}
             className={inputCls()}
           >
-            <option value="per_unit">Per eenheid</option>
+            <option value="per_unit">Per unit</option>
             <option value="per_batch">Per batch</option>
           </select>
         </Field>
@@ -362,7 +362,7 @@ const Step4_AdvancedSettings: React.FC<{
   if (form.resourceClass === 'delay') {
     return (
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-        <p className="text-sm text-slate-600">Technische vertragingen hebben geen geavanceerde instellingen.</p>
+        <p className="text-sm text-slate-600">Technical delays do not have advanced settings.</p>
       </div>
     );
   }
@@ -370,8 +370,8 @@ const Step4_AdvancedSettings: React.FC<{
   return (
     <div className="space-y-4">
       <Field
-        label="Aantal gelijktijdig actief"
-        tooltip="Hoeveel machines, medewerkers of middelen tegelijk deze stap uitvoeren"
+        label="Parallel units active"
+        tooltip="How many machines, workers, or resources perform this step in parallel"
       >
         <input
           type="number"
@@ -382,7 +382,7 @@ const Step4_AdvancedSettings: React.FC<{
         />
       </Field>
 
-      <Field label="Beschikbaarheid (%)">
+      <Field label="Availability (%)">
         <input
           type="number"
           value={form.availability * 100}
@@ -395,7 +395,7 @@ const Step4_AdvancedSettings: React.FC<{
       </Field>
 
       {form.resourceClass !== 'buffer' && (
-        <Field label="Uitvoering (%)">
+        <Field label="Yield (%)">
           <input
             type="number"
             value={form.yieldPct}
@@ -409,7 +409,7 @@ const Step4_AdvancedSettings: React.FC<{
       )}
 
       {form.resourceClass === 'processing' && (
-        <Field label="Opstarttijd per dag (minuten)">
+        <Field label="Startup time per day (minutes)">
           <input
             type="number"
             value={form.dailyStartupMinutes}
@@ -447,7 +447,7 @@ const Step5_CapacityPreview: React.FC<{
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h4 className="font-semibold text-sm text-red-900 mb-2">Validatiefouten</h4>
+              <h4 className="font-semibold text-sm text-red-900 mb-2">Validation errors</h4>
               <ul className="text-sm text-red-800 space-y-1">
                 {Object.entries(errors).map(([field, msg]) => (
                   <li key={field}>• {msg}</li>
@@ -459,24 +459,24 @@ const Step5_CapacityPreview: React.FC<{
           <div className="flex items-start gap-3">
             <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h4 className="font-semibold text-sm text-green-900 mb-2">Validatie geslaagd</h4>
-              <p className="text-sm text-green-800">Al je instellingen zijn correct ingesteld.</p>
+              <h4 className="font-semibold text-sm text-green-900 mb-2">Validation passed</h4>
+              <p className="text-sm text-green-800">All your settings are configured correctly.</p>
             </div>
           </div>
         )}
       </div>
 
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-        <h4 className="font-semibold text-sm text-slate-900 mb-3">Capaciteitsoverzicht</h4>
+        <h4 className="font-semibold text-sm text-slate-900 mb-3">Capacity overview</h4>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-slate-600">Theoretische snelheid:</span>
+            <span className="text-slate-600">Theoretical rate:</span>
             <span className="font-mono text-slate-900">
               {preview.theoreticalRate === null ? '—' : preview.theoreticalRate.toFixed(1)} /uur
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-600">Effectieve snelheid:</span>
+            <span className="text-slate-600">Effective rate:</span>
             <span className="font-mono text-slate-900">
               {preview.effectiveRate === null ? '—' : preview.effectiveRate.toFixed(1)} /uur
             </span>
@@ -485,7 +485,7 @@ const Step5_CapacityPreview: React.FC<{
 
         {preview.warnings.length > 0 && (
           <div className="mt-3 pt-3 border-t border-slate-200">
-            <h5 className="text-xs font-semibold text-slate-700 uppercase mb-2">Waarschuwingen</h5>
+            <h5 className="text-xs font-semibold text-slate-700 uppercase mb-2">Warnings</h5>
             {preview.warnings.map((w, i) => (
               <p key={i} className="text-xs text-amber-700 mb-1">• {w}</p>
             ))}
@@ -505,11 +505,11 @@ const Step6_Confirmation: React.FC<{
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-slate-900">Controleer je instellingen</h3>
+      <h3 className="text-sm font-semibold text-slate-900">Review your settings</h3>
 
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-slate-600">Naam:</span>
+          <span className="text-slate-600">Name:</span>
           <span className="font-semibold text-slate-900">{form.name}</span>
         </div>
         <div className="flex justify-between">
@@ -520,14 +520,14 @@ const Step6_Confirmation: React.FC<{
         </div>
         {form.departmentId && (
           <div className="flex justify-between">
-            <span className="text-slate-600">Afdeling:</span>
+            <span className="text-slate-600">Department:</span>
             <span className="font-semibold text-slate-900">{dept?.name}</span>
           </div>
         )}
       </div>
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-        Klik op "Aanmaken" om dit proces-element aan te maken.
+        Click "Create" to create this process element.
       </div>
     </div>
   );
@@ -600,8 +600,8 @@ export const ProcessElementCreationFlow: React.FC<ProcessElementCreationFlowProp
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <div>
-            <h2 className="text-lg font-bold text-slate-900">Nieuw proces-element</h2>
-            <p className="text-xs text-slate-500 mt-1">Stap {step} van 6: {STEP_LABELS[step]}</p>
+            <h2 className="text-lg font-bold text-slate-900">New process element</h2>
+            <p className="text-xs text-slate-500 mt-1">Step {step} of 6: {STEP_LABELS[step]}</p>
           </div>
           <button
             onClick={onClose}
@@ -638,7 +638,7 @@ export const ProcessElementCreationFlow: React.FC<ProcessElementCreationFlowProp
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
-            Terug
+            Back
           </button>
 
           <div className="flex gap-2">
@@ -646,7 +646,7 @@ export const ProcessElementCreationFlow: React.FC<ProcessElementCreationFlowProp
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors"
             >
-              Annuleer
+              Cancel
             </button>
 
             {step < 6 ? (
@@ -655,7 +655,7 @@ export const ProcessElementCreationFlow: React.FC<ProcessElementCreationFlowProp
                 disabled={!canProceed()}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
               >
-                Volgende
+                Next
                 <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
@@ -664,7 +664,7 @@ export const ProcessElementCreationFlow: React.FC<ProcessElementCreationFlowProp
                 disabled={!canProceed() || Object.keys(errors).length > 0}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
               >
-                Aanmaken
+                Create
               </button>
             )}
           </div>
