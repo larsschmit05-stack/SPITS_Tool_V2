@@ -22,7 +22,7 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
       yieldPct: 95,
       availability: 0.9,
       dailyStartupMinutes: 15,
-      description: 'Standard CNC-bewerkingscentrum. Gebruik als basis voor freesmachines en draaibanken.',
+      description: 'Standard CNC machining center. Use as a starting point for milling machines and lathes.',
     },
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
@@ -84,7 +84,7 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
       dailyStartupMinutes: 0,
       parallelUnits: 1,
       yieldPct: 100,
-      description: 'Standard cold storage. Adjust slot capacity and dwell time to your situation.',
+      description: 'Standard cold storage. Adjust slot capacity and dwell time for your situation.',
     },
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
@@ -105,14 +105,14 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
       availability: 0.9,
       dailyStartupMinutes: 0,
       yieldPct: 100,
-      description: 'Internal transport by forklift. Adjust trip duration and load size.',
+      description: 'Internal transport by forklift. Adjust trip duration and load capacity.',
     },
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
   },
   {
     id: 'tpl-cooling-delay',
-    name: 'Cooling Delay',
+    name: 'Cooling Break',
     resourceClass: 'delay',
     industry: 'food',
     isSystemTemplate: true,
@@ -124,7 +124,7 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
       yieldPct: 100,
       availability: 1,
       dailyStartupMinutes: 0,
-      description: 'Standard cooling delay (e.g. after pasteurization). Adjust wait time for your process.',
+      description: 'Standard cooling break (e.g. after pasteurisation). Adjust wait time for your process.',
     },
     createdAt: SEED_TIMESTAMP,
     updatedAt: SEED_TIMESTAMP,
@@ -135,7 +135,7 @@ const SEED_TEMPLATES: ResourceTemplate[] = [
  * Default project state with realistic capacity data for development/demo.
  *
  * Verification values (corrected — availability applied once, to hours):
- *   Dept "Production": Mon–Fri 8h → 10 working days in a 2-week horizon = 80h/dept
+ *   Dept "Productie": Mon–Fri 8h → 10 working days in a 2-week horizon = 80h/dept
  *   CNC:      startup 15min×10d = 2.5h → net 77.5h → effective 69.75h (×0.90)
  *             rate 50 u/hr × 1 unit = 50 u/hr, cumYield 0.95×0.98=0.931
  *             → maxGood/hr 46.55 → maxGood 3247 units
@@ -290,7 +290,7 @@ export const DEFAULT_PROJECT_STATE: ProjectState = {
     {
       id: 'node-qc-wait',
       nodeType: 'timeStep',
-      name: 'Quality Control Wait Time',
+      name: 'Quality Control Wait',
       position: { x: 940, y: 200 },
       durationMinutesPerUnit: 8,
       enabled: true,

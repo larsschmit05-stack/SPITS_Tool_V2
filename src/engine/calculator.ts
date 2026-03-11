@@ -148,6 +148,10 @@ export function computeStepResults(
     /** Output units produced per input unit at this step. Defaults to 1. */
     conversionRatio: number;
     dept: EngineDepartment | null;
+    // Pass 4 — material flow fields
+    inflowUnitsPerHour?: number | null;
+    outflowUnitsPerHour?: number | null;
+    actualThroughputUnitsPerHour?: number | null;
   }
 
   const intermediates: StepIntermediate[] = processSteps.map((step, idx) => {
@@ -327,7 +331,41 @@ export function computeStepResults(
   }
 
   // ---------------------------------------------------------------------------
-  // Pass 3: assemble StepResult[]
+  // Pass 3 (material flow): forward propagation — inflow / outflow per step
+  // ---------------------------------------------------------------------------
+
+  {
+    const startStep = orderedSteps.find(s => s.type === 'start');
+    let prevOutflow: number | null =
+      startStep?.type === 'start' && startStep.supplyMode === 'fixed' && startStep.maxUnitsPerHour != null
+        ? startStep.maxUnitsPerHour
+        : null; // null = unconstrained
+
+    for (const im of intermediates) {
+      im.inflowUnitsPerHour = prevOutflow;
+
+      if (!im.enabled) {
+        // Disabled steps are transparent — pass inflow through unchanged
+        im.actualThroughputUnitsPerHour = prevOutflow;
+        im.outflowUnitsPerHour = prevOutflow;
+      } else if (im.step.type === 'resourceStep') {
+        const effectiveRate = im.effectiveRateUnitsPerHour;
+        const actualThroughput =
+          prevOutflow === null ? effectiveRate : Math.min(prevOutflow, effectiveRate);
+        im.actualThroughputUnitsPerHour = round4(actualThroughput);
+        im.outflowUnitsPerHour = round4(actualThroughput * im.yieldFactor * im.conversionRatio);
+      } else {
+        // timeStep: pass-through rate, apply conversionRatio only
+        im.actualThroughputUnitsPerHour = prevOutflow;
+        im.outflowUnitsPerHour = prevOutflow === null ? null : round4(prevOutflow * im.conversionRatio);
+      }
+
+      prevOutflow = im.outflowUnitsPerHour ?? null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pass 4: assemble StepResult[]
   // ---------------------------------------------------------------------------
 
   const processStepResults = intermediates.map((im, i): StepResult => {
@@ -409,6 +447,11 @@ export function computeStepResults(
       }
     }
 
+    // Material flow fields (Pass 3 forward propagation)
+    base.inflowUnitsPerHour = im.inflowUnitsPerHour;
+    base.outflowUnitsPerHour = im.outflowUnitsPerHour;
+    base.actualThroughputUnitsPerHour = im.actualThroughputUnitsPerHour;
+
     return base;
   });
 
@@ -430,6 +473,7 @@ export function computeStepResults(
         : utilization >= 0.9 ? 'warning'
         : 'ok';
       return {
+        outflowUnitsPerHour: round4(maxUph),
         stepId: s.id,
         stepIndex: -(orderedSteps.filter(x => x.type === 'start').length - idx),
         stepType: 'source' as const,

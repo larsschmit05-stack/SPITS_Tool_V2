@@ -320,6 +320,14 @@ export interface StepResult {
   /** Effective conversion ratio applied at this step. 1 when no conversion. */
   conversionRatio?: number;
 
+  // --- Material flow fields (forward propagation, Pass 4) ---
+  /** Actual units/hour entering this step (null = unconstrained). Undefined for source steps. */
+  inflowUnitsPerHour?: number | null;
+  /** Actual units/hour leaving this step after capacity + conversion. Null = unconstrained. */
+  outflowUnitsPerHour?: number | null;
+  /** min(inflow, effectiveRate) for resource steps; inflow for time steps; null = unconstrained */
+  actualThroughputUnitsPerHour?: number | null;
+
   // --- Calculated performance fields ---
   scheduledHours: number;
   startupHoursApplied: number;

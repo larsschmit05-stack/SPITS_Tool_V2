@@ -170,6 +170,10 @@ function computeNodeFlowKpis(
 // Helpers
 // ---------------------------------------------------------------------------
 
+function formatRate(v: number): string {
+  return v.toLocaleString('nl-NL', { maximumFractionDigits: 2 });
+}
+
 function nodeTypeLabel(nodeType: FlowNode['nodeType']): string {
   switch (nodeType) {
     case 'start': return 'SOURCE';
@@ -425,6 +429,14 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
                     {flowLoadPct !== null ? `${flowLoadPct.toFixed(0)}%` : '—'}
                   </span>
                 </div>
+                {stepResult.inflowUnitsPerHour !== undefined && (
+                  <div className="text-slate-400">
+                    ↓ {stepResult.inflowUnitsPerHour === null ? '∞' : `${formatRate(stepResult.inflowUnitsPerHour)} e/h`}
+                    {stepResult.outflowUnitsPerHour !== undefined && (
+                      <> · ↑ {stepResult.outflowUnitsPerHour === null ? '∞' : `${formatRate(stepResult.outflowUnitsPerHour)} e/h`}</>
+                    )}
+                  </div>
+                )}
               </>
             ) : (
               <span className="italic">{hasResource ? 'Scenario required for KPIs' : 'Link a resource'}</span>
@@ -432,8 +444,16 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
           </div>
         )}
         {node.nodeType === 'timeStep' && (
-          <div className="mt-1 text-[10px] text-slate-500">
+          <div className="mt-1 text-[10px] text-slate-500 space-y-px">
             {hasDuration ? `${node.durationMinutesPerUnit} min/unit` : <span className="italic text-amber-500">Enter duration</span>}
+            {stepResult?.inflowUnitsPerHour !== undefined && (
+              <div className="text-slate-400">
+                ↓ {stepResult.inflowUnitsPerHour === null ? '∞' : `${formatRate(stepResult.inflowUnitsPerHour)} e/h`}
+                {stepResult.outflowUnitsPerHour !== undefined && (
+                  <> · ↑ {stepResult.outflowUnitsPerHour === null ? '∞' : `${formatRate(stepResult.outflowUnitsPerHour)} e/h`}</>
+                )}
+              </div>
+            )}
           </div>
         )}
         {/* Source node: material + supply info */}
@@ -450,6 +470,11 @@ const NodeComponent: React.FC<NodeComponentProps> = ({
             {stepResult?.utilizationAtTarget != null && node.supplyMode === 'fixed' && (
               <div className={stepResult.utilizationAtTarget >= 0.9 ? 'text-red-500 font-semibold' : 'text-slate-500'}>
                 {(stepResult.utilizationAtTarget * 100).toFixed(0)}% target
+              </div>
+            )}
+            {stepResult?.outflowUnitsPerHour !== undefined && (
+              <div className="text-slate-400">
+                ↑ {stepResult.outflowUnitsPerHour === null ? '∞ onbeperkt' : `${formatRate(stepResult.outflowUnitsPerHour)} e/h`}
               </div>
             )}
           </div>

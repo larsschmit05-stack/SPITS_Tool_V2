@@ -5,7 +5,7 @@ Deze conventies zorgen dat termen in UI, domeinmodel, engine en documentatie het
 Principes:
 
 - één term = één betekenis
-- Nederlands in UI, Engels in code waar functioneel
+- Engels in UI en in code
 - expliciet onderscheid tussen baseline en scenario
 
 ---
@@ -14,8 +14,8 @@ Principes:
 
 ### 1.1 UI-teksten
 
-- Primair Nederlands, kort en operationeel.
-- Gebruik herkenbare productietermen (bijv. “Bottleneck”, “Capaciteit”, “Afdeling”).
+- Primair Engels, kort en operationeel.
+- Gebruik herkenbare productietermen (bijv. “Bottleneck”, “Capacity”, “Department”).
 
 ### 1.2 Code & datavelden
 
@@ -132,7 +132,7 @@ Terminologie:
 
 Aanbevolen labelstijl in UI:
 
-- werkwoord + object (bijv. “Vullen”, “Sealen”, “Transport naar koeling”).
+- verb + object (e.g. “Fill”, “Seal”, “Transport to Cooling”).
 
 ---
 

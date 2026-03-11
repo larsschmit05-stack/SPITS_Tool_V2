@@ -324,3 +324,212 @@ describe('run() - conversionRatio bug regression', () => {
     expect(step.utilizationAtTarget).toBeCloseTo(0.0625, 5);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Material flow propagation (Pass 3 forward)
+// ---------------------------------------------------------------------------
+
+describe('run() - material flow propagation', () => {
+  it('fixed supply 10 e/h → resource (eff 20 e/h, yield 80%, conv 10): inflow=10, throughput=10, outflow=80', () => {
+    const state: ProjectState = {
+      materials: [],
+      templates: [],
+      resources: [
+        {
+          id: 'res-packer',
+          name: 'Packer',
+          type: 'continuous',
+          departmentId: 'dept-prod',
+          outputPerHour: 20,
+          parallelUnits: 1,
+          yieldPct: 80,
+          availability: 1.0,
+          dailyStartupMinutes: 0,
+          resourceClass: 'processing',
+          processingMode: 'continuous',
+        },
+      ],
+      departments: [
+        {
+          id: 'dept-prod',
+          name: 'Production',
+          color: '#3B82F6',
+          hoursByWeekday: { mon: 8, tue: 8, wed: 8, thu: 8, fri: 8, sat: 0, sun: 0 },
+          availableHoursPerWeek: 40,
+        },
+      ],
+      steps: [],
+      scenarios: [
+        {
+          id: 'sc',
+          name: 'Baseline',
+          createdAt: Date.now(),
+          demand: {
+            targetGoodUnits: 100,
+            horizonCalendarDays: 7,
+            startDateISO: '2026-03-02',
+            timezone: 'Europe/Amsterdam',
+          },
+        },
+      ],
+      activeScenarioId: 'sc',
+      nodes: [
+        {
+          id: 'node-start',
+          nodeType: 'start',
+          name: 'Start',
+          position: { x: 0, y: 0 },
+          supplyMode: 'fixed',
+          fixedSupplyAmount: 10,
+          fixedSupplyPeriodUnit: 'hour',
+        },
+        {
+          id: 'node-packer',
+          nodeType: 'resourceStep',
+          name: 'Packer',
+          position: { x: 200, y: 0 },
+          resourceId: 'res-packer',
+          enabled: true,
+          conversionRatio: 10,
+        },
+        { id: 'node-end', nodeType: 'end', name: 'End', position: { x: 400, y: 0 } },
+      ],
+      edges: [
+        { id: 'e1', source: 'node-start', target: 'node-packer' },
+        { id: 'e2', source: 'node-packer', target: 'node-end' },
+      ],
+      isDirty: false,
+      latestRunResult: null,
+    };
+
+    const result = run(state, {
+      projectId: 'test-project',
+      scenarioId: null,
+      targetGoodUnits: 100,
+      horizonCalendarDays: 7,
+      startDateISO: '2026-03-02',
+      timezone: 'Europe/Amsterdam',
+    });
+
+    // steps[0] = source StepResult (fixed supply), steps[1] = packer
+    const sourceStep = result.baseline.steps.find(s => s.stepType === 'source');
+    const packerStep = result.baseline.steps.find(s => s.stepId === 'node-packer');
+
+    expect(sourceStep).toBeDefined();
+    expect(packerStep).toBeDefined();
+
+    // Source outflow = 10 e/h
+    expect(sourceStep!.outflowUnitsPerHour).toBeCloseTo(10, 4);
+
+    // Packer: inflow=10, throughput=min(10,20)=10, outflow=10×0.8×10=80
+    expect(packerStep!.inflowUnitsPerHour).toBeCloseTo(10, 4);
+    expect(packerStep!.actualThroughputUnitsPerHour).toBeCloseTo(10, 4);
+    expect(packerStep!.outflowUnitsPerHour).toBeCloseTo(80, 4);
+  });
+
+  it('unlimited supply → resource (eff 20 e/h, yield 80%): inflow=null, throughput=20, outflow=16', () => {
+    const state: ProjectState = {
+      materials: [],
+      templates: [],
+      resources: [
+        {
+          id: 'res-roaster',
+          name: 'Roaster',
+          type: 'continuous',
+          departmentId: 'dept-prod',
+          outputPerHour: 20,
+          parallelUnits: 1,
+          yieldPct: 80,
+          availability: 1.0,
+          dailyStartupMinutes: 0,
+          resourceClass: 'processing',
+          processingMode: 'continuous',
+        },
+      ],
+      departments: [
+        {
+          id: 'dept-prod',
+          name: 'Production',
+          color: '#3B82F6',
+          hoursByWeekday: { mon: 8, tue: 8, wed: 8, thu: 8, fri: 8, sat: 0, sun: 0 },
+          availableHoursPerWeek: 40,
+        },
+      ],
+      steps: [],
+      scenarios: [
+        {
+          id: 'sc',
+          name: 'Baseline',
+          createdAt: Date.now(),
+          demand: {
+            targetGoodUnits: 100,
+            horizonCalendarDays: 7,
+            startDateISO: '2026-03-02',
+            timezone: 'Europe/Amsterdam',
+          },
+        },
+      ],
+      activeScenarioId: 'sc',
+      nodes: [
+        { id: 'node-start', nodeType: 'start', name: 'Start', position: { x: 0, y: 0 } },
+        {
+          id: 'node-roaster',
+          nodeType: 'resourceStep',
+          name: 'Roaster',
+          position: { x: 200, y: 0 },
+          resourceId: 'res-roaster',
+          enabled: true,
+        },
+        { id: 'node-end', nodeType: 'end', name: 'End', position: { x: 400, y: 0 } },
+      ],
+      edges: [
+        { id: 'e1', source: 'node-start', target: 'node-roaster' },
+        { id: 'e2', source: 'node-roaster', target: 'node-end' },
+      ],
+      isDirty: false,
+      latestRunResult: null,
+    };
+
+    const result = run(state, {
+      projectId: 'test-project',
+      scenarioId: null,
+      targetGoodUnits: 100,
+      horizonCalendarDays: 7,
+      startDateISO: '2026-03-02',
+      timezone: 'Europe/Amsterdam',
+    });
+
+    const roasterStep = result.baseline.steps.find(s => s.stepId === 'node-roaster');
+    expect(roasterStep).toBeDefined();
+
+    // Unlimited supply → inflow=null, throughput=effectiveRate=20, outflow=20×0.8=16
+    expect(roasterStep!.inflowUnitsPerHour).toBeNull();
+    expect(roasterStep!.actualThroughputUnitsPerHour).toBeCloseTo(20, 4);
+    expect(roasterStep!.outflowUnitsPerHour).toBeCloseTo(16, 4);
+  });
+
+  it('supply 5 e/h → resource (eff 20 e/h): throughput=5 (supply is bottleneck)', () => {
+    const state = makeBaseState();
+    // Override start node to fixed supply 5 e/h
+    state.nodes[0] = {
+      ...state.nodes[0],
+      supplyMode: 'fixed',
+      fixedSupplyAmount: 5,
+      fixedSupplyPeriodUnit: 'hour',
+    };
+    // CNC has outputPerHour=50, so supply is the constraint
+    const result = run(state, {
+      projectId: 'test-project',
+      scenarioId: null,
+      targetGoodUnits: 100,
+      horizonCalendarDays: 7,
+      startDateISO: '2026-03-02',
+      timezone: 'Europe/Amsterdam',
+    });
+
+    const cncStep = result.baseline.steps.find(s => s.stepId === 'node-cnc');
+    expect(cncStep).toBeDefined();
+    expect(cncStep!.inflowUnitsPerHour).toBeCloseTo(5, 4);
+    expect(cncStep!.actualThroughputUnitsPerHour).toBeCloseTo(5, 4);
+  });
+});
